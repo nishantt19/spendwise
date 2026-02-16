@@ -42,7 +42,9 @@ export function SignupForm({
         toast.error(result.message);
       } else {
         toast.success(result.message);
-        router.push("/auth/login");
+        router.push(
+          `/auth/verify-email?email=${encodeURIComponent(data.email)}`,
+        );
       }
     });
   };

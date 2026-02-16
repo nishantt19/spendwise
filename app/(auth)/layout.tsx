@@ -1,17 +1,10 @@
-import { getUserSession } from "@/actions/auth";
 import { CreditCard02 } from "@untitledui/icons";
-import { redirect } from "next/navigation";
 
 export default async function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const response = await getUserSession();
-  if (response?.user) {
-    redirect("/");
-  }
-
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="bg-primary relative hidden lg:block w-full h-full"></div>
