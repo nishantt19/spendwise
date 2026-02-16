@@ -49,7 +49,10 @@ export function PasswordResetSentPrompt({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup className="gap-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2 items-center">
+            <div className="flex items-center justify-center size-14 rounded-full bg-primary/10 ring-8 ring-primary/5">
+              <Mail01 className="size-6 text-primary" />
+            </div>
             <h1 className="text-2xl font-bold">Check Your Email</h1>
             <p className="text-muted-foreground text-sm text-balance">
               {`We've sent password reset instructions to`}

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Lock01 } from "@untitledui/icons";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -58,12 +59,17 @@ export function ResetPasswordForm({
       {...props}
     >
       <FieldGroup className="gap-6">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Set new password</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Your new password must be different from the previously used
-            passwords.
-          </p>
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="flex items-center justify-center size-14 rounded-full bg-primary/10 ring-8 ring-primary/5">
+            <Lock01 className="size-6 text-primary" />
+          </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <h1 className="text-2xl font-bold">Set new password</h1>
+            <p className="text-muted-foreground text-sm text-balance">
+              Your new password must be different from the previously used
+              passwords.
+            </p>
+          </div>
         </div>
         <Field>
           <FieldLabel htmlFor="password">Password</FieldLabel>

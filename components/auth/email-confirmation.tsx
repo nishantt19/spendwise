@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Mail01 } from "@untitledui/icons";
+import { Mail01, CheckCircle, XCircle } from "@untitledui/icons";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -96,6 +96,9 @@ export function EmailConfirmation({
         <div className="flex flex-col items-center gap-4 text-center">
           {result.status === "success" ? (
             <>
+              <div className="flex items-center justify-center size-14 rounded-full bg-primary/10 ring-8 ring-primary/5">
+                <CheckCircle className="size-6 text-primary" />
+              </div>
               <h1 className="text-2xl font-bold">Email Verified!</h1>
               <p className="text-muted-foreground text-sm text-balance">
                 {result.message}
@@ -113,6 +116,9 @@ export function EmailConfirmation({
             </>
           ) : (
             <>
+              <div className="flex items-center justify-center size-14 rounded-full bg-destructive/10 ring-8 ring-destructive/5">
+                <XCircle className="size-6 text-destructive" />
+              </div>
               <h1 className="text-2xl font-bold">Verification Failed</h1>
               <p className="text-destructive text-sm text-balance">
                 {result.message}

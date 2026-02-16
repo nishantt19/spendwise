@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Key01 } from "@untitledui/icons";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,11 +57,16 @@ export function ForgotPasswordForm({
       {...props}
     >
       <FieldGroup className="gap-6">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Forgot your Password?</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Enter your email below to receive a password reset link
-          </p>
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <div className="flex items-center justify-center size-14 rounded-full bg-primary/10 ring-8 ring-primary/5">
+            <Key01 className="size-6 text-primary" />
+          </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <h1 className="text-2xl font-bold">Forgot your Password?</h1>
+            <p className="text-muted-foreground text-sm text-balance">
+              Enter your email below to receive a password reset link
+            </p>
+          </div>
         </div>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
