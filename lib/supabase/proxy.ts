@@ -1,13 +1,27 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = [
+  "/auth/login",
+  "/auth/signup",
+  "/auth/forgot-password",
+  "/auth/password-reset-sent",
+  "/auth/reset-password",
+];
+
+// Routes accessible to authenticated but unverified users
+const UNVERIFIED_ALLOWED_ROUTES = [
+  "/auth/verify-email",
+  "/auth/confirm",
+  "/auth/callback",
+];
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
 
-  // With Fluid compute, don't put this client in a global environment
-  // variable. Always create a new one on each request.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -28,27 +42,31 @@ export async function updateSession(request: NextRequest) {
           );
         },
       },
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
     },
   );
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
+  // IMPORTANT: getClaims() automatically refreshes expired sessions
   const { data } = await supabase.auth.getClaims();
-
   const user = data?.claims;
 
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith("/auth");
+  const pathname = request.nextUrl.pathname;
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isUnverifiedAllowedRoute = UNVERIFIED_ALLOWED_ROUTES.includes(pathname);
+  const isAuthRoute = pathname.startsWith("/auth");
+
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
@@ -56,8 +74,7 @@ export async function updateSession(request: NextRequest) {
     user &&
     authUser &&
     !authUser.email_confirmed_at &&
-    !isAuthRoute &&
-    request.nextUrl.pathname !== "/auth/verify-email"
+    !isUnverifiedAllowedRoute
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/verify-email";
@@ -65,18 +82,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+  if (user && authUser?.email_confirmed_at && isPublicRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
