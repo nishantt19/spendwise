@@ -164,13 +164,9 @@ export function EmailConfirmation({
                         disabled={isPending || resendCooldown > 0 || !email}
                         className="flex-1"
                       >
-                        {isPending ? (
-                          <span className="flex items-center gap-1.5">
-                            <Spinner /> Sending...
-                          </span>
-                        ) : (
-                          "Send Verification Email"
-                        )}
+                        <span className="flex justify-center items-center gap-1.5">
+                          {isPending ? <Spinner /> : ""} Send Verification Email
+                        </span>
                       </Button>
                       <Button
                         onClick={toggleResendForm}

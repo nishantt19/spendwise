@@ -42,7 +42,9 @@ export function ForgotPasswordForm({
         toast.error(result.message);
       } else {
         toast.success(result.message);
-        router.push("/");
+        router.push(
+          `/auth/password-reset-sent?email=${encodeURIComponent(data.email)}`,
+        );
       }
     });
   };

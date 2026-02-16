@@ -7,19 +7,19 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, FieldDescription } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
-import { resendVerificationEmail } from "@/actions/auth";
+import { forgotPassword } from "@/actions/auth";
 
-interface VerifyEmailPromptProps extends React.ComponentProps<"div"> {
+interface PasswordResetSentPromptProps extends React.ComponentProps<"div"> {
   email: string;
 }
 
 const RESEND_COOLDOWN = 60;
 
-export function VerifyEmailPrompt({
+export function PasswordResetSentPrompt({
   email,
   className,
   ...props
-}: VerifyEmailPromptProps) {
+}: PasswordResetSentPromptProps) {
   const [isPending, startTransition] = useTransition();
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
 
@@ -35,7 +35,7 @@ export function VerifyEmailPrompt({
 
   const handleResendEmail = () => {
     startTransition(async () => {
-      const result = await resendVerificationEmail(email);
+      const result = await forgotPassword({ email });
       if (result.status === "error") {
         toast.error(result.message);
       } else {
@@ -50,9 +50,9 @@ export function VerifyEmailPrompt({
       <FieldGroup className="gap-6">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Verify Your Email</h1>
+            <h1 className="text-2xl font-bold">Check Your Email</h1>
             <p className="text-muted-foreground text-sm text-balance">
-              {`We've sent a verification email to`}
+              {`We've sent password reset instructions to`}
             </p>
             <p className="font-semibold text-foreground">{email}</p>
           </div>
@@ -61,15 +61,15 @@ export function VerifyEmailPrompt({
             <p className="text-sm font-medium">Next steps:</p>
             <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
               <li>Check your email inbox (and spam folder)</li>
-              <li>Click the verification link in the email</li>
-              <li>{`You'll be redirected to login`}</li>
+              <li>Click the password reset link in the email</li>
+              <li>{`You'll be able to create a new password`}</li>
             </ol>
           </div>
 
           <div className="w-full p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
             <p className="text-xs text-amber-900 dark:text-amber-200 font-medium">
-              ⚠️ Important: The verification link expires in 6 minutes for
-              security. Please verify your email promptly.
+              ⚠️ Important: The reset link expires in 6 minutes for security.
+              Please use it promptly.
             </p>
           </div>
 
@@ -97,12 +97,12 @@ export function VerifyEmailPrompt({
           </div>
 
           <FieldDescription className="text-xs text-center text-muted-foreground">
-            Already verified?{" "}
+            Remember your password?{" "}
             <a
               href="/auth/login"
               className="text-primary hover:underline font-medium"
             >
-              Login
+              Back to login
             </a>
           </FieldDescription>
         </div>

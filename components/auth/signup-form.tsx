@@ -128,7 +128,7 @@ export function SignupForm({
             </span>
           </Button>
           <FieldDescription className="px-6 text-center">
-            Already have an account? <a href="/auth/login">Sign in</a>
+            Already have an account? <a href="/auth/login">Login</a>
           </FieldDescription>
         </Field>
       </FieldGroup>

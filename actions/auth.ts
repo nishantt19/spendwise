@@ -33,10 +33,13 @@ export async function signUp(formData: SignupFormData) {
       message: error.message,
       user: null,
     };
-  } else if (data.user?.identities?.length === 0) {
+  }
+
+  if (data.user?.identities?.length === 0) {
     return {
-      status: "error",
-      message: "User with this email already exists. Please log in instead.",
+      status: "success",
+      message:
+        "Please check your email for verification instructions. If you already have an account, you can log in directly.",
       user: null,
     };
   }
@@ -148,7 +151,8 @@ export async function forgotPassword(formData: ForgotPasswordFormData) {
 
   return {
     status: "success",
-    message: "Password reset email sent! Please check your inbox.",
+    message:
+      "If an account exists with this email, you will receive password reset instructions.",
   };
 }
 
