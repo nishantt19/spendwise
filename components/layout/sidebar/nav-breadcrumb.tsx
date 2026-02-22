@@ -11,10 +11,11 @@ import {
 
 const routeLabels: Record<string, string> = {
   "/": "Dashboard",
-  "/expenses": "Expenses",
-  "/budget": "Budget",
-  "/categories": "Categories",
+  "/transactions": "Transactions",
+  "/income": "Income",
   "/recurring": "Recurring",
+  "/categories": "Categories",
+  "/reports": "Reports",
   "/settings": "Settings",
 };
 
