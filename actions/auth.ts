@@ -69,28 +69,6 @@ export async function signIn(formData: LoginFormData) {
     };
   }
 
-  const { data: existingUser } = await supabase
-    .from("user_profiles")
-    .select("*")
-    .eq("email", formData.email)
-    .limit(1)
-    .single();
-
-  if (!existingUser) {
-    const { error: insertError } = await supabase.from("user_profiles").insert({
-      email: data.user?.email,
-      name: data.user.user_metadata?.name,
-    });
-
-    if (insertError) {
-      return {
-        status: "error",
-        message: insertError.message,
-        user: null,
-      };
-    }
-  }
-
   revalidatePath("/", "layout");
   return {
     status: "success",
