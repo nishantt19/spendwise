@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -40,7 +40,6 @@ import { todayISO } from "@/lib/format";
 import type { Category } from "@/types/categories";
 import type {
   TransactionFormData,
-  TransactionType,
   TransactionWithCategory,
 } from "@/types/transactions";
 
@@ -51,7 +50,7 @@ type TransactionSheetProps = {
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   transaction?: TransactionWithCategory | null;
-  defaultType?: TransactionType;
+  onSuccess?: () => void;
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -61,38 +60,29 @@ export function TransactionSheet({
   onOpenChange,
   categories,
   transaction,
-  defaultType = "expense",
+  onSuccess,
 }: TransactionSheetProps) {
   const isEditing = !!transaction;
   const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const prevTypeRef = useRef<TransactionType>(defaultType);
+
+  // Only show expense categories — this page is expenses-only
+  const expenseCategories = categories.filter((c) => c.type === "expense");
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: buildDefaults(defaultType, null),
+    defaultValues: buildDefaults(null),
   });
 
-  const watchedType = form.watch("type");
-  const availableCategories = categories.filter((c) => c.type === watchedType);
   const isLoading = isSaving || isDeleting;
 
   // Reset form and confirmDelete state on open / transaction change
   useEffect(() => {
     if (!open) return;
     setConfirmDelete(false);
-    prevTypeRef.current = transaction?.type ?? defaultType;
-    form.reset(buildDefaults(transaction?.type ?? defaultType, transaction));
-  }, [open, transaction, defaultType, form]);
-
-  // When type toggle changes, reset category_id to avoid type mismatch
-  useEffect(() => {
-    if (prevTypeRef.current !== watchedType) {
-      form.setValue("category_id", null);
-      prevTypeRef.current = watchedType;
-    }
-  }, [watchedType, form]);
+    form.reset(buildDefaults(transaction));
+  }, [open, transaction, form]);
 
   function onSubmit(values: TransactionFormData) {
     startSaveTransition(async () => {
@@ -106,6 +96,7 @@ export function TransactionSheet({
       }
 
       toast.success(result.message);
+      onSuccess?.();
       onOpenChange(false);
     });
   }
@@ -120,6 +111,7 @@ export function TransactionSheet({
       }
 
       toast.success(result.message);
+      onSuccess?.();
       onOpenChange(false);
     });
   }
@@ -129,12 +121,12 @@ export function TransactionSheet({
       <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-md" side="right">
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>
-            {isEditing ? "Edit transaction" : "New transaction"}
+            {isEditing ? "Edit expense" : "New expense"}
           </SheetTitle>
           <SheetDescription>
             {isEditing
-              ? "Update the details of this transaction."
-              : "Record a new income or expense."}
+              ? "Update the details of this expense."
+              : "Record a new expense."}
           </SheetDescription>
         </SheetHeader>
 
@@ -143,28 +135,6 @@ export function TransactionSheet({
           className="flex flex-1 flex-col overflow-y-auto"
         >
           <div className="flex flex-col gap-5 px-6 py-5">
-            {/* ── Type toggle ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={watchedType === "expense" ? "default" : "outline"}
-                className="w-full"
-                disabled={isLoading}
-                onClick={() => form.setValue("type", "expense")}
-              >
-                Expense
-              </Button>
-              <Button
-                type="button"
-                variant={watchedType === "income" ? "default" : "outline"}
-                className="w-full"
-                disabled={isLoading}
-                onClick={() => form.setValue("type", "income")}
-              >
-                Income
-              </Button>
-            </div>
-
             {/* ── Amount ──────────────────────────────────────────────── */}
             <Field>
               <FieldLabel htmlFor="tx-amount">Amount</FieldLabel>
@@ -220,12 +190,12 @@ export function TransactionSheet({
                   <SelectValue placeholder="Select a category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCategories.length === 0 ? (
+                  {expenseCategories.length === 0 ? (
                     <SelectItem value="_empty" disabled>
-                      No {watchedType} categories found
+                      No expense categories found
                     </SelectItem>
                   ) : (
-                    availableCategories.map((cat) => (
+                    expenseCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         <span className="flex items-center gap-2">
                           <span>{cat.icon ?? "📁"}</span>
@@ -323,7 +293,7 @@ export function TransactionSheet({
                     className="w-full"
                     onClick={() => setConfirmDelete(true)}
                   >
-                    Delete transaction
+                    Delete expense
                   </Button>
                 ) : (
                   <>
@@ -370,7 +340,7 @@ export function TransactionSheet({
               <Button type="submit" className="flex-1" disabled={isLoading}>
                 <span className="flex items-center justify-center gap-1.5">
                   {isSaving ? <Spinner /> : ""}
-                  {isEditing ? "Save changes" : "Add transaction"}
+                  {isEditing ? "Save changes" : "Add expense"}
                 </span>
               </Button>
             </div>
@@ -383,15 +353,10 @@ export function TransactionSheet({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// DefaultValues<T> makes all fields optional, so we can safely omit `amount`
-// for new transactions — the number input renders blank, which is correct UX.
-function buildDefaults(
-  type: TransactionType,
-  transaction: TransactionWithCategory | null | undefined,
-) {
+function buildDefaults(transaction: TransactionWithCategory | null | undefined) {
   if (transaction) {
     return {
-      type: transaction.type,
+      type: "expense" as const,
       amount: transaction.amount,
       description: transaction.description,
       category_id: transaction.category_id ?? null,
@@ -402,7 +367,7 @@ function buildDefaults(
   }
 
   return {
-    type,
+    type: "expense" as const,
     // amount omitted → renders as blank number input
     description: "",
     category_id: null,

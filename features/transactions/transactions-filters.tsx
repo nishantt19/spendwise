@@ -23,13 +23,11 @@ import {
 
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "@/schema/transactions";
 import type { Category } from "@/types/categories";
-import type { TransactionType } from "@/types/transactions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type FilterState = {
   search: string;
-  type: TransactionType | "";
   categoryId: string;
   paymentMethod: string;
   dateFrom: string;
@@ -65,7 +63,7 @@ export function TransactionsFilters({
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <Input
-            placeholder="Search transactions..."
+            placeholder="Search expenses..."
             value={filters.search}
             onChange={(e) => onFilterChange("search", e.target.value)}
             className="pl-9"
@@ -75,7 +73,7 @@ export function TransactionsFilters({
         <Button size="default" onClick={onAddClick}>
           <span className="flex items-center justify-center gap-1.5">
             <Plus size={15} />
-            Add transaction
+            Add expense
           </span>
         </Button>
       </div>
@@ -83,23 +81,6 @@ export function TransactionsFilters({
       {/* ── Filter row ────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
         <FilterLines size={15} className="shrink-0 text-muted-foreground" />
-
-        {/* Type */}
-        <div className="flex rounded-md border">
-          {(["", "expense", "income"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => onFilterChange("type", t)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors first:rounded-l-md last:rounded-r-md ${
-                filters.type === t
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              {t === "" ? "All" : t === "expense" ? "Expenses" : "Income"}
-            </button>
-          ))}
-        </div>
 
         {/* Category */}
         <Select
@@ -113,7 +94,7 @@ export function TransactionsFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">All categories</SelectItem>
-            {categories.map((cat) => (
+            {categories.filter((c) => c.type === "expense").map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 <span className="flex items-center gap-1.5">
                   <span>{cat.icon ?? "📁"}</span>

@@ -31,7 +31,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { name: "Dashboard",    url: "/",             icon: BarChartSquare02 },
-  { name: "Transactions", url: "/transactions", icon: CreditCard02     },
+  { name: "Expenses",     url: "/transactions", icon: CreditCard02     },
   { name: "Income",       url: "/income",       icon: Wallet01         },
   { name: "Recurring",    url: "/recurring",    icon: RefreshCw04      },
   { name: "Categories",   url: "/categories",   icon: Grid01           },

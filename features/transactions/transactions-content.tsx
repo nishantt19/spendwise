@@ -15,7 +15,6 @@ import { TransactionSheet } from "./transaction-sheet";
 import type { Category } from "@/types/categories";
 import type {
   TransactionFilters,
-  TransactionType,
   TransactionWithCategory,
 } from "@/types/transactions";
 
@@ -29,7 +28,6 @@ type TransactionsContentProps = {
 
 const EMPTY_FILTERS: FilterState = {
   search: "",
-  type: "",
   categoryId: "",
   paymentMethod: "",
   dateFrom: "",
@@ -54,17 +52,15 @@ export function TransactionsContent({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<TransactionWithCategory | null>(null);
-  const [defaultSheetType, setDefaultSheetType] =
-    useState<TransactionType>("expense");
 
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Build the Supabase filter object from local filter state
+  // Build the Supabase filter object — always locked to expense type
   const activeFilters = useMemo<TransactionFilters>(
     () => ({
+      type: "expense",
       search: debouncedSearch || undefined,
-      type: (filters.type || undefined) as TransactionType | undefined,
       category_id: filters.categoryId || undefined,
       payment_method: (filters.paymentMethod || undefined) as
         | TransactionFilters["payment_method"]
@@ -75,7 +71,6 @@ export function TransactionsContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       debouncedSearch,
-      filters.type,
       filters.categoryId,
       filters.paymentMethod,
       filters.dateFrom,
@@ -97,11 +92,22 @@ export function TransactionsContent({
     });
   }, [activeFilters]);
 
-  // Count of non-empty filter fields (excluding search which has its own input)
+  // Re-fetch after any mutation (create / update / delete) — updates list instantly
+  const handleRefresh = useCallback(() => {
+    setPage(1);
+    startTransition(async () => {
+      const result = await getTransactions(activeFilters, 1);
+      if (!result.error) {
+        setTransactions(result.data);
+        setTotal(result.total);
+      }
+    });
+  }, [activeFilters]);
+
+  // Count of non-empty filter fields
   const activeFilterCount = useMemo(
     () =>
       [
-        filters.type,
         filters.categoryId,
         filters.paymentMethod,
         filters.dateFrom,
@@ -127,13 +133,11 @@ export function TransactionsContent({
 
   function openCreateSheet() {
     setSelectedTransaction(null);
-    setDefaultSheetType("expense");
     setSheetOpen(true);
   }
 
   function openEditSheet(transaction: TransactionWithCategory) {
     setSelectedTransaction(transaction);
-    setDefaultSheetType(transaction.type);
     setSheetOpen(true);
   }
 
@@ -196,13 +200,13 @@ export function TransactionsContent({
         )}
       </div>
 
-      {/* Transaction sheet */}
+      {/* Expense sheet */}
       <TransactionSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         categories={categories}
         transaction={selectedTransaction}
-        defaultType={defaultSheetType}
+        onSuccess={handleRefresh}
       />
     </>
   );
