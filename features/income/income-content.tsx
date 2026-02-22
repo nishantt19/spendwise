@@ -14,12 +14,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Trash01,
 } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 import { formatCurrency } from "@/lib/format";
 import {
@@ -27,7 +29,7 @@ import {
   INCOME_SOURCE_TYPE_COLORS,
   MONTH_LABELS,
 } from "@/schema/income-sources";
-import { getIncomeSources, toggleIncomeReceived } from "@/actions/income-sources";
+import { getIncomeSources, toggleIncomeReceived, deleteIncomeSource } from "@/actions/income-sources";
 import { IncomeSourceSheet } from "./income-source-sheet";
 import type { IncomeSource, IncomeSourceType } from "@/types/income-sources";
 
@@ -127,6 +129,18 @@ export function IncomeContent({
     setSheetOpen(true);
   }
 
+  function handleDeleteSource(source: IncomeSource) {
+    startFetchTransition(async () => {
+      const result = await deleteIncomeSource(source.id);
+      if (result.status === "error") {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      setSources((prev) => prev.filter((s) => s.id !== source.id));
+    });
+  }
+
   // ── Summary ────────────────────────────────────────────────────────
   const totalExpected = sources.reduce((sum, s) => sum + s.amount, 0);
   const totalReceived = sources
@@ -203,17 +217,32 @@ export function IncomeContent({
           />
         ) : (
           <div
-            className="flex flex-col divide-y rounded-xl border transition-opacity duration-200"
+            className="overflow-hidden rounded-xl border transition-opacity duration-200"
             style={{ opacity: isFetching ? 0.5 : 1, pointerEvents: isFetching ? "none" : "auto" }}
           >
-            {sources.map((source) => (
-              <IncomeSourceRow
-                key={source.id}
-                source={source}
-                onRowClick={openEditSheet}
-                onToggleReceived={handleToggleReceived}
-              />
-            ))}
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40 text-xs text-muted-foreground">
+                  <th className="px-4 py-2.5 text-left font-medium">Name</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Type</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Status</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Amount</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Month</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {sources.map((source) => (
+                  <IncomeSourceRow
+                    key={source.id}
+                    source={source}
+                    onRowClick={openEditSheet}
+                    onToggleReceived={handleToggleReceived}
+                    onDelete={handleDeleteSource}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -265,63 +294,76 @@ function IncomeSourceRow({
   source,
   onRowClick,
   onToggleReceived,
+  onDelete,
 }: {
   source: IncomeSource;
   onRowClick: (source: IncomeSource) => void;
   onToggleReceived: (source: IncomeSource) => void;
+  onDelete: (source: IncomeSource) => void;
 }) {
   const Icon = TYPE_ICONS[source.source_type];
   const color = INCOME_SOURCE_TYPE_COLORS[source.source_type];
 
   return (
-    <div className="flex w-full items-center gap-3 px-4 py-3 first:rounded-t-xl last:rounded-b-xl">
-      {/* Clickable area: icon + text */}
-      <button
-        onClick={() => onRowClick(source)}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-      >
-        {/* Type icon */}
-        <div
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-          style={{
-            backgroundColor: `${color}1a`,
-            border: `1px solid ${color}30`,
-          }}
-        >
-          <Icon size={16} style={{ color }} />
+    <tr
+      className="cursor-pointer transition-colors hover:bg-muted/50"
+      onClick={() => onRowClick(source)}
+    >
+      {/* Name */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex size-7 shrink-0 items-center justify-center rounded-md"
+            style={{ backgroundColor: `${color}1a`, border: `1px solid ${color}30` }}
+          >
+            <Icon size={14} style={{ color }} />
+          </div>
+          <span className="max-w-44 truncate font-medium">{source.name}</span>
         </div>
+      </td>
 
-        {/* Name + type */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{source.name}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
-          </p>
-        </div>
+      {/* Type */}
+      <td className="px-4 py-3 text-muted-foreground">
+        {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
+      </td>
 
-        {/* Amount */}
-        <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-          {formatCurrency(source.amount)}
-        </p>
-      </button>
+      {/* Status */}
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => onToggleReceived(source)}>
+          <Badge
+            variant={source.is_received ? "default" : "secondary"}
+            className={cn(
+              "text-[11px] transition-colors",
+              source.is_received
+                ? "border-transparent bg-emerald-600 text-white hover:bg-emerald-700"
+                : "hover:bg-muted",
+            )}
+          >
+            {source.is_received ? "Received" : "Pending"}
+          </Badge>
+        </button>
+      </td>
 
-      {/* Received toggle — separate from the edit click area */}
-      <button
-        onClick={() => onToggleReceived(source)}
-        className="shrink-0 ml-2"
-      >
-        <Badge
-          variant={source.is_received ? "default" : "secondary"}
-          className={`text-[11px] transition-colors ${
-            source.is_received
-              ? "bg-emerald-600 hover:bg-emerald-700 text-white border-transparent"
-              : "hover:bg-muted"
-          }`}
+      {/* Amount */}
+      <td className="px-4 py-3 font-semibold tabular-nums text-foreground">
+        {formatCurrency(source.amount)}
+      </td>
+
+      {/* Month */}
+      <td className="px-4 py-3 text-muted-foreground">
+        {MONTH_LABELS[source.month - 1]}
+      </td>
+
+      {/* Actions */}
+      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={() => onDelete(source)}
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
-          {source.is_received ? "Received" : "Pending"}
-        </Badge>
-      </button>
-    </div>
+          <Trash01 size={14} />
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -372,18 +414,35 @@ export function IncomeContentSkeleton() {
           </div>
         ))}
       </div>
-      <div className="flex flex-col divide-y rounded-xl border">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <Skeleton className="size-9 rounded-lg" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-36 rounded" />
-              <Skeleton className="h-3 w-20 rounded" />
-            </div>
-            <Skeleton className="h-4 w-16 rounded" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-        ))}
+      <div className="overflow-hidden rounded-xl border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40">
+              {["Name", "Type", "Status", "Amount", "Month", "Actions"].map((h) => (
+                <th key={h} className="px-4 py-2.5 text-left">
+                  <Skeleton className="h-3 w-12 rounded" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {[...Array(3)].map((_, i) => (
+              <tr key={i}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <Skeleton className="size-7 rounded-md" />
+                    <Skeleton className="h-3.5 w-28 rounded" />
+                  </div>
+                </td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-16 rounded" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-16 rounded" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-16 rounded" /></td>
+                <td className="px-4 py-3 text-right"><Skeleton className="ml-auto size-7 rounded-md" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

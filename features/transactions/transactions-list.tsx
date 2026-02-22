@@ -1,8 +1,14 @@
 "use client";
 
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { Trash01 } from "@untitledui/icons";
+
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { PAYMENT_METHOD_LABELS } from "@/schema/transactions";
-import { formatCurrency, formatDateHeader } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
+import { softDeleteTransaction } from "@/actions/transactions";
 import type { TransactionWithCategory } from "@/types/transactions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -12,6 +18,7 @@ type TransactionsListProps = {
   total: number;
   isPending: boolean;
   onRowClick: (transaction: TransactionWithCategory) => void;
+  onDelete: () => void;
 };
 
 // ─── Root component ───────────────────────────────────────────────────────────
@@ -21,6 +28,7 @@ export function TransactionsList({
   total,
   isPending,
   onRowClick,
+  onDelete,
 }: TransactionsListProps) {
   if (isPending && transactions.length === 0) {
     return <TransactionsSkeleton />;
@@ -30,23 +38,34 @@ export function TransactionsList({
     return <EmptyState />;
   }
 
-  // Group by date ("YYYY-MM-DD")
-  const grouped = groupByDate(transactions);
-
   return (
     <div
       className="transition-opacity duration-200"
       style={{ opacity: isPending ? 0.5 : 1, pointerEvents: isPending ? "none" : "auto" }}
     >
-      <div className="flex flex-col divide-y rounded-xl border">
-        {Object.entries(grouped).map(([date, txs]) => (
-          <DateGroup
-            key={date}
-            date={date}
-            transactions={txs}
-            onRowClick={onRowClick}
-          />
-        ))}
+      <div className="overflow-hidden rounded-xl border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40 text-xs text-muted-foreground">
+              <th className="px-4 py-2.5 text-left font-medium">Description</th>
+              <th className="px-4 py-2.5 text-left font-medium">Category</th>
+              <th className="px-4 py-2.5 text-left font-medium">Amount</th>
+              <th className="px-4 py-2.5 text-left font-medium">Method</th>
+              <th className="px-4 py-2.5 text-left font-medium">Date</th>
+              <th className="px-4 py-2.5 text-right font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {transactions.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                transaction={tx}
+                onRowClick={onRowClick}
+                onDeleteSuccess={onDelete}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Count */}
@@ -58,96 +77,88 @@ export function TransactionsList({
   );
 }
 
-// ─── Date group ───────────────────────────────────────────────────────────────
-
-function DateGroup({
-  date,
-  transactions,
-  onRowClick,
-}: {
-  date: string;
-  transactions: TransactionWithCategory[];
-  onRowClick: (transaction: TransactionWithCategory) => void;
-}) {
-  const net = transactions.reduce((acc, tx) => {
-    return tx.type === "income" ? acc + tx.amount : acc - tx.amount;
-  }, 0);
-
-  return (
-    <div>
-      {/* Date header */}
-      <div className="flex items-center justify-between bg-muted/40 px-4 py-2">
-        <span className="text-xs font-semibold text-foreground">
-          {formatDateHeader(date)}
-        </span>
-        <span
-          className={`text-xs font-medium ${
-            net >= 0 ? "text-emerald-600" : "text-destructive"
-          }`}
-        >
-          {net >= 0 ? "+" : ""}
-          {formatCurrency(net)}
-        </span>
-      </div>
-
-      {/* Transactions */}
-      {transactions.map((tx) => (
-        <TransactionRow key={tx.id} transaction={tx} onClick={onRowClick} />
-      ))}
-    </div>
-  );
-}
-
 // ─── Transaction row ──────────────────────────────────────────────────────────
 
 function TransactionRow({
   transaction: tx,
-  onClick,
+  onRowClick,
+  onDeleteSuccess,
 }: {
   transaction: TransactionWithCategory;
-  onClick: (transaction: TransactionWithCategory) => void;
+  onRowClick: (transaction: TransactionWithCategory) => void;
+  onDeleteSuccess: () => void;
 }) {
   const cat = tx.category;
   const color = cat?.color ?? "#6b7280";
-  const icon = cat?.icon ?? (tx.type === "expense" ? "💸" : "💰");
-  const isExpense = tx.type === "expense";
+  const icon = cat?.icon ?? "💸";
+  const [isDeleting, startDeleteTransition] = useTransition();
+
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    startDeleteTransition(async () => {
+      const result = await softDeleteTransaction(tx.id);
+      if (result.status === "error") {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      onDeleteSuccess();
+    });
+  }
+
+  const formattedDate = new Date(tx.date + "T00:00:00").toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
-    <button
-      onClick={() => onClick(tx)}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+    <tr
+      className="cursor-pointer transition-colors hover:bg-muted/50"
+      onClick={() => onRowClick(tx)}
     >
-      {/* Category icon */}
-      <div
-        className="flex size-9 shrink-0 items-center justify-center rounded-lg text-base"
-        style={{
-          backgroundColor: `${color}1a`,
-          border: `1px solid ${color}30`,
-        }}
-      >
-        {icon}
-      </div>
+      {/* Description */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-sm"
+            style={{ backgroundColor: `${color}1a`, border: `1px solid ${color}30` }}
+          >
+            {icon}
+          </div>
+          <span className="max-w-50 truncate font-medium">{tx.description}</span>
+        </div>
+      </td>
 
-      {/* Description + meta */}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{tx.description}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {cat?.name ?? "Uncategorized"}
-          <span className="mx-1.5 text-muted-foreground/40">·</span>
-          {PAYMENT_METHOD_LABELS[tx.payment_method]}
-        </p>
-      </div>
+      {/* Category */}
+      <td className="px-4 py-3 text-muted-foreground">
+        {cat?.name ?? "Uncategorized"}
+      </td>
 
       {/* Amount */}
-      <p
-        className={`shrink-0 text-sm font-semibold tabular-nums ${
-          isExpense ? "text-destructive" : "text-emerald-600"
-        }`}
-      >
-        {isExpense ? "−" : "+"}
-        {formatCurrency(tx.amount)}
-      </p>
-    </button>
+      <td className="px-4 py-3 font-semibold tabular-nums text-destructive">
+        −{formatCurrency(tx.amount)}
+      </td>
+
+      {/* Method */}
+      <td className="px-4 py-3 text-muted-foreground">
+        {PAYMENT_METHOD_LABELS[tx.payment_method]}
+      </td>
+
+      {/* Date */}
+      <td className="px-4 py-3 text-muted-foreground">{formattedDate}</td>
+
+      {/* Actions */}
+      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+        >
+          {isDeleting ? <Spinner className="size-3.5" /> : <Trash01 size={14} />}
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -171,32 +182,35 @@ function EmptyState() {
 
 function TransactionsSkeleton() {
   return (
-    <div className="flex flex-col divide-y rounded-xl border">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-3">
-          <Skeleton className="size-9 rounded-lg" />
-          <div className="flex-1 space-y-1.5">
-            <Skeleton className="h-3.5 w-2/5 rounded" />
-            <Skeleton className="h-3 w-1/4 rounded" />
-          </div>
-          <Skeleton className="h-4 w-16 rounded" />
-        </div>
-      ))}
+    <div className="overflow-hidden rounded-xl border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-muted/40">
+            {["Description", "Category", "Amount", "Method", "Date", "Actions"].map((h) => (
+              <th key={h} className="px-4 py-2.5 text-left">
+                <Skeleton className="h-3 w-16 rounded" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {[...Array(6)].map((_, i) => (
+            <tr key={i}>
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="size-7 rounded-md" />
+                  <Skeleton className="h-3.5 w-32 rounded" />
+                </div>
+              </td>
+              <td className="px-4 py-3"><Skeleton className="h-3 w-20 rounded" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-3 w-16 rounded" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-3 w-16 rounded" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-3 w-20 rounded" /></td>
+              <td className="px-4 py-3 text-right"><Skeleton className="ml-auto size-7 rounded-md" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
-  );
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function groupByDate(
-  transactions: TransactionWithCategory[],
-): Record<string, TransactionWithCategory[]> {
-  return transactions.reduce(
-    (acc, tx) => {
-      if (!acc[tx.date]) acc[tx.date] = [];
-      acc[tx.date].push(tx);
-      return acc;
-    },
-    {} as Record<string, TransactionWithCategory[]>,
   );
 }

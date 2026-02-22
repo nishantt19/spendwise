@@ -180,6 +180,7 @@ export function TransactionsContent({
           total={total}
           isPending={isPending}
           onRowClick={openEditSheet}
+          onDelete={handleRefresh}
         />
 
         {/* Load more */}
