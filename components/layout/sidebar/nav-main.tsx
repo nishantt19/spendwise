@@ -4,12 +4,10 @@ import type { FC, SVGProps } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart01,
   BarChartSquare02,
   CreditCard02,
   Grid01,
   RefreshCw04,
-  Settings01,
   Wallet01,
 } from "@untitledui/icons";
 
@@ -30,13 +28,11 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { name: "Dashboard",    url: "/",             icon: BarChartSquare02 },
-  { name: "Expenses",     url: "/transactions", icon: CreditCard02     },
-  { name: "Income",       url: "/income",       icon: Wallet01         },
-  { name: "Recurring",    url: "/recurring",    icon: RefreshCw04      },
-  { name: "Categories",   url: "/categories",   icon: Grid01           },
-  { name: "Reports",      url: "/reports",      icon: BarChart01       },
-  { name: "Settings",     url: "/settings",     icon: Settings01       },
+  { name: "Dashboard",  url: "/",             icon: BarChartSquare02 },
+  { name: "Expenses",   url: "/transactions", icon: CreditCard02     },
+  { name: "Income",     url: "/income",       icon: Wallet01         },
+  { name: "Recurring",  url: "/recurring",    icon: RefreshCw04      },
+  { name: "Categories", url: "/categories",   icon: Grid01           },
 ];
 
 export function NavMain() {

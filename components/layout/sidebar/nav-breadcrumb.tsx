@@ -11,12 +11,10 @@ import {
 
 const routeLabels: Record<string, string> = {
   "/": "Dashboard",
-  "/transactions": "Transactions",
+  "/transactions": "Expenses",
   "/income": "Income",
   "/recurring": "Recurring",
   "/categories": "Categories",
-  "/reports": "Reports",
-  "/settings": "Settings",
 };
 
 export function NavBreadcrumb() {
