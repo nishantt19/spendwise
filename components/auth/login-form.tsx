@@ -23,8 +23,9 @@ import { signIn } from "@/actions/auth";
 
 export function LoginForm({
   className,
+  redirect,
   ...props
-}: React.ComponentProps<"form">) {
+}: React.ComponentProps<"form"> & { redirect?: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -43,7 +44,7 @@ export function LoginForm({
         toast.error(result.message);
       } else {
         toast.success(result.message);
-        router.push("/");
+        router.push(redirect || "/");
       }
     });
   };
