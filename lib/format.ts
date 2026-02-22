@@ -59,3 +59,43 @@ export function formatDateShort(dateStr: string): string {
 export function todayISO(): string {
   return new Date().toISOString().split("T")[0];
 }
+
+// ─── Recurring due date ───────────────────────────────────────────────────────
+
+export type DueDateStatus = "overdue" | "today" | "soon" | "upcoming";
+
+/**
+ * Returns a human-readable label and status for a recurring next_due_date.
+ * e.g. { label: "Due today", status: "today" }
+ */
+export function formatNextDueDate(dateStr: string): {
+  label: string;
+  status: DueDateStatus;
+} {
+  const date = new Date(`${dateStr}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffMs = date.getTime() - today.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    const abs = Math.abs(diffDays);
+    return {
+      label: `Overdue · ${abs} day${abs !== 1 ? "s" : ""}`,
+      status: "overdue",
+    };
+  }
+  if (diffDays === 0) return { label: "Due today", status: "today" };
+  if (diffDays === 1) return { label: "Due tomorrow", status: "soon" };
+  if (diffDays <= 7) return { label: `Due in ${diffDays} days`, status: "soon" };
+
+  return {
+    label: date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+    }),
+    status: "upcoming",
+  };
+}
