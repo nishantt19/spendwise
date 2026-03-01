@@ -21,10 +21,9 @@ export function formatCurrency(amount: number, currency = "INR"): string {
  * e.g. "Today", "Yesterday", "Mon, 19 Jan", "15 Jan 2025"
  */
 export function formatDateHeader(dateStr: string): string {
-  // Parse as local midnight to avoid UTC offset shifting the day
   const date = new Date(`${dateStr}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use IST for "today" so date boundaries match Indian time
+  const today = new Date(`${todayISO()}T00:00:00`);
 
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
@@ -54,10 +53,15 @@ export function formatDateShort(dateStr: string): string {
 }
 
 /**
- * Returns today's date as a "YYYY-MM-DD" string (for default date inputs).
+ * Returns today's date as a "YYYY-MM-DD" string in Indian Standard Time (IST, UTC+5:30).
  */
 export function todayISO(): string {
-  return new Date().toISOString().split("T")[0];
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 // ─── Recurring due date ───────────────────────────────────────────────────────
@@ -73,8 +77,8 @@ export function formatNextDueDate(dateStr: string): {
   status: DueDateStatus;
 } {
   const date = new Date(`${dateStr}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use IST for "today" so date boundaries match Indian time
+  const today = new Date(`${todayISO()}T00:00:00`);
 
   const diffMs = date.getTime() - today.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
@@ -94,7 +98,7 @@ export function formatNextDueDate(dateStr: string): {
     label: date.toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
-      year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+      year: "numeric",
     }),
     status: "upcoming",
   };

@@ -2,13 +2,19 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Plus, RefreshCw04 } from "@untitledui/icons";
+import { Plus, RefreshCw04, Trash01, FilePlus02 } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-import { formatCurrency, formatNextDueDate } from "@/lib/format";
+import { formatCurrency, formatNextDueDate, type DueDateStatus } from "@/lib/format";
 import {
   RECURRING_FREQUENCY_LABELS,
   RECURRING_MONTHLY_MULTIPLIERS,
@@ -16,6 +22,8 @@ import {
 import {
   getRecurringExpenses,
   toggleRecurringActive,
+  deleteRecurringExpense,
+  addRecurringToExpense,
 } from "@/actions/recurring";
 import { RecurringSheet } from "./recurring-sheet";
 import type { RecurringWithCategory } from "@/types/recurring";
@@ -60,6 +68,32 @@ export function RecurringContent({
     });
   }
 
+  function handleDelete(expense: RecurringWithCategory) {
+    startTransition(async () => {
+      const result = await deleteRecurringExpense(expense.id);
+      if (result.status === "error") {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      setExpenses((prev) => prev.filter((e) => e.id !== expense.id));
+    });
+  }
+
+  function handleAddToExpense(expense: RecurringWithCategory) {
+    startTransition(async () => {
+      const result = await addRecurringToExpense(expense.id);
+      if (result.status === "error") {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      // Refresh to get updated next_due_date
+      const refreshed = await getRecurringExpenses();
+      if (!refreshed.error) setExpenses(refreshed.data);
+    });
+  }
+
   // Re-fetch after any mutation via the sheet
   const handleRefresh = useCallback(() => {
     startTransition(async () => {
@@ -87,7 +121,7 @@ export function RecurringContent({
   );
 
   return (
-    <>
+    <TooltipProvider>
       <div className="flex flex-col gap-6">
         {/* ── Add button ────────────────────────────────────────────── */}
         <div className="flex justify-end">
@@ -120,19 +154,36 @@ export function RecurringContent({
           </div>
         )}
 
-        {/* ── Expense list ──────────────────────────────────────────── */}
+        {/* ── Table ─────────────────────────────────────────────────── */}
         {expenses.length === 0 ? (
           <EmptyState onAddClick={openCreateSheet} />
         ) : (
-          <div className="flex flex-col divide-y rounded-xl border">
-            {expenses.map((expense) => (
-              <RecurringRow
-                key={expense.id}
-                expense={expense}
-                onRowClick={openEditSheet}
-                onToggleActive={handleToggleActive}
-              />
-            ))}
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40 text-xs text-muted-foreground">
+                  <th className="px-4 py-2.5 text-left font-medium">Name</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Amount</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Frequency</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Status</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Category</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Next due</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {expenses.map((expense) => (
+                  <RecurringRow
+                    key={expense.id}
+                    expense={expense}
+                    onRowClick={openEditSheet}
+                    onToggleActive={handleToggleActive}
+                    onDelete={handleDelete}
+                    onAddToExpense={handleAddToExpense}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -145,7 +196,7 @@ export function RecurringContent({
         expense={selectedExpense}
         onSuccess={handleRefresh}
       />
-    </>
+    </TooltipProvider>
   );
 }
 
@@ -183,93 +234,151 @@ function RecurringRow({
   expense,
   onRowClick,
   onToggleActive,
+  onDelete,
+  onAddToExpense,
 }: {
   expense: RecurringWithCategory;
   onRowClick: (expense: RecurringWithCategory) => void;
   onToggleActive: (expense: RecurringWithCategory) => void;
+  onDelete: (expense: RecurringWithCategory) => void;
+  onAddToExpense: (expense: RecurringWithCategory) => void;
 }) {
   const { label: dueLabel, status: dueStatus } = expense.is_active
     ? formatNextDueDate(expense.next_due_date)
-    : { label: "", status: "upcoming" as const };
+    : { label: "Paused", status: "upcoming" as DueDateStatus };
 
-  const dueLabelClass = {
+  const isDue = expense.is_active && (dueStatus === "overdue" || dueStatus === "today");
+
+  const dueLabelClass: Record<DueDateStatus, string> = {
     overdue: "text-red-500",
     today: "text-amber-500",
     soon: "text-amber-500",
     upcoming: "text-muted-foreground",
-  }[dueStatus];
+  };
 
   const cat = expense.category;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 first:rounded-t-xl last:rounded-b-xl">
-      {/* Clickable area: icon + text */}
-      <button
-        onClick={() => onRowClick(expense)}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-      >
-        {/* Icon */}
-        {cat?.color ? (
-          <div
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-            style={{
-              backgroundColor: `${cat.color}1a`,
-              border: `1px solid ${cat.color}30`,
-            }}
-          >
-            {cat.icon ? (
-              <span className="text-base leading-none">{cat.icon}</span>
-            ) : (
-              <RefreshCw04 size={16} style={{ color: cat.color }} />
-            )}
-          </div>
-        ) : (
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-            {cat?.icon ? (
-              <span className="text-base leading-none">{cat.icon}</span>
-            ) : (
-              <RefreshCw04 size={16} className="text-muted-foreground" />
-            )}
-          </div>
-        )}
-
-        {/* Name + frequency + due date */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{expense.name}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {RECURRING_FREQUENCY_LABELS[expense.frequency]}
-            {expense.is_active && dueLabel && (
-              <>
-                {" · "}
-                <span className={dueLabelClass}>{dueLabel}</span>
-              </>
-            )}
-          </p>
+    <tr
+      className="cursor-pointer transition-colors hover:bg-muted/50"
+      onClick={() => onRowClick(expense)}
+    >
+      {/* Name */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          {cat?.color ? (
+            <div
+              className="flex size-7 shrink-0 items-center justify-center rounded-md"
+              style={{
+                backgroundColor: `${cat.color}1a`,
+                border: `1px solid ${cat.color}30`,
+              }}
+            >
+              {cat.icon ? (
+                <span className="text-xs leading-none">{cat.icon}</span>
+              ) : (
+                <RefreshCw04 size={13} style={{ color: cat.color }} />
+              )}
+            </div>
+          ) : (
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted">
+              {cat?.icon ? (
+                <span className="text-xs leading-none">{cat.icon}</span>
+              ) : (
+                <RefreshCw04 size={13} className="text-muted-foreground" />
+              )}
+            </div>
+          )}
+          <span className="max-w-40 truncate font-medium">{expense.name}</span>
         </div>
+      </td>
 
-        {/* Amount */}
-        <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-          {formatCurrency(expense.amount)}
-        </p>
-      </button>
+      {/* Amount */}
+      <td className="px-4 py-3 font-semibold tabular-nums text-foreground">
+        {formatCurrency(expense.amount)}
+      </td>
 
-      {/* Active / Paused toggle */}
-      <button
-        onClick={() => onToggleActive(expense)}
-        className="ml-2 shrink-0"
+      {/* Frequency */}
+      <td className="px-4 py-3 text-muted-foreground">
+        {RECURRING_FREQUENCY_LABELS[expense.frequency]}
+      </td>
+
+      {/* Status */}
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => onToggleActive(expense)}>
+          <Badge
+            variant={expense.is_active ? "default" : "secondary"}
+            className={`text-[11px] transition-colors ${
+              expense.is_active
+                ? "border-transparent bg-emerald-600 text-white hover:bg-emerald-700"
+                : "hover:bg-muted"
+            }`}
+          >
+            {expense.is_active ? "Active" : "Paused"}
+          </Badge>
+        </button>
+      </td>
+
+      {/* Category */}
+      <td className="px-4 py-3 text-muted-foreground">
+        {cat ? (
+          <span className="flex items-center gap-1.5">
+            {cat.icon && <span>{cat.icon}</span>}
+            <span>{cat.name}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50">—</span>
+        )}
+      </td>
+
+      {/* Next due date */}
+      <td className={`px-4 py-3 text-sm ${expense.is_active ? dueLabelClass[dueStatus] : "text-muted-foreground/50"}`}>
+        {expense.is_active ? dueLabel : "—"}
+      </td>
+
+      {/* Actions */}
+      <td
+        className="px-4 py-3 text-right"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Badge
-          variant={expense.is_active ? "default" : "secondary"}
-          className={`text-[11px] transition-colors ${
-            expense.is_active
-              ? "bg-emerald-600 hover:bg-emerald-700 border-transparent text-white"
-              : "hover:bg-muted"
-          }`}
-        >
-          {expense.is_active ? "Active" : "Paused"}
-        </Badge>
-      </button>
-    </div>
+        <div className="flex items-center justify-end gap-1">
+          {/* Add to expense */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => isDue && onAddToExpense(expense)}
+                disabled={!isDue}
+                className={`inline-flex size-7 items-center justify-center rounded-md transition-colors
+                  ${isDue
+                    ? "text-muted-foreground hover:bg-emerald-600/10 hover:text-emerald-600"
+                    : "cursor-not-allowed text-muted-foreground/30"
+                  }`}
+              >
+                <FilePlus02 size={14} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {isDue
+                ? "Add to expenses"
+                : `Due ${new Date(`${expense.next_due_date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Delete */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => onDelete(expense)}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash01 size={14} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Delete</TooltipContent>
+          </Tooltip>
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -311,18 +420,41 @@ export function RecurringContentSkeleton() {
           </div>
         ))}
       </div>
-      <div className="flex flex-col divide-y rounded-xl border">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <Skeleton className="size-9 rounded-lg" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-40 rounded" />
-              <Skeleton className="h-3 w-24 rounded" />
-            </div>
-            <Skeleton className="h-4 w-16 rounded" />
-            <Skeleton className="h-5 w-14 rounded-full" />
-          </div>
-        ))}
+      <div className="overflow-hidden rounded-xl border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40">
+              {["Name", "Amount", "Frequency", "Status", "Category", "Next due", "Actions"].map((h) => (
+                <th key={h} className="px-4 py-2.5 text-left">
+                  <Skeleton className="h-3 w-12 rounded" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {[...Array(4)].map((_, i) => (
+              <tr key={i}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <Skeleton className="size-7 rounded-md" />
+                    <Skeleton className="h-3.5 w-32 rounded" />
+                  </div>
+                </td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-16 rounded" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-14 rounded" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-20 rounded" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-3 w-20 rounded" /></td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Skeleton className="size-7 rounded-md" />
+                    <Skeleton className="size-7 rounded-md" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

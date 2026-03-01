@@ -1,18 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { Plus, SearchMd, FilterLines, CalendarDate, X } from "@untitledui/icons";
+import { Plus, SearchMd, FilterLines } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -30,8 +22,6 @@ export type FilterState = {
   search: string;
   categoryId: string;
   paymentMethod: string;
-  dateFrom: string;
-  dateTo: string;
 };
 
 type TransactionsFiltersProps = {
@@ -125,20 +115,6 @@ export function TransactionsFilters({
           </SelectContent>
         </Select>
 
-        {/* Date range */}
-        <DatePickerButton
-          value={filters.dateFrom}
-          placeholder="From"
-          toDate={filters.dateTo ? parseISO(filters.dateTo) : undefined}
-          onChange={(val) => onFilterChange("dateFrom", val)}
-        />
-        <DatePickerButton
-          value={filters.dateTo}
-          placeholder="To"
-          fromDate={filters.dateFrom ? parseISO(filters.dateFrom) : undefined}
-          onChange={(val) => onFilterChange("dateTo", val)}
-        />
-
         {/* Clear all */}
         {activeFilterCount > 0 && (
           <button
@@ -153,78 +129,5 @@ export function TransactionsFilters({
         )}
       </div>
     </div>
-  );
-}
-
-// ─── DatePickerButton ─────────────────────────────────────────────────────────
-
-type DatePickerButtonProps = {
-  value: string; // "YYYY-MM-DD" or ""
-  placeholder: string;
-  fromDate?: Date;
-  toDate?: Date;
-  onChange: (value: string) => void;
-};
-
-function DatePickerButton({
-  value,
-  placeholder,
-  fromDate,
-  toDate,
-  onChange,
-}: DatePickerButtonProps) {
-  const [open, setOpen] = useState(false);
-
-  const selected = value ? parseISO(value) : undefined;
-
-  function handleSelect(date: Date | undefined) {
-    onChange(date ? format(date, "yyyy-MM-dd") : "");
-    setOpen(false);
-  }
-
-  function handleClear(e: React.MouseEvent) {
-    e.stopPropagation();
-    onChange("");
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 flex h-8 w-36 items-center gap-2 rounded-md border bg-transparent px-3 text-xs whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
-        >
-          <CalendarDate size={14} className="shrink-0 text-muted-foreground" />
-          <span className={`flex-1 text-left ${value ? "text-foreground" : "text-muted-foreground"}`}>
-            {value ? format(parseISO(value), "dd MMM yyyy") : placeholder}
-          </span>
-          {value ? (
-            <span
-              role="button"
-              onClick={handleClear}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X size={12} />
-            </span>
-          ) : (
-            <span className="opacity-0">
-              <X size={12} />
-            </span>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selected}
-          onSelect={handleSelect}
-          disabled={(date) => {
-            if (fromDate && date < fromDate) return true;
-            if (toDate && date > toDate) return true;
-            return false;
-          }}
-          autoFocus
-        />
-      </PopoverContent>
-    </Popover>
   );
 }

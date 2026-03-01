@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Sheet,
   SheetContent,
@@ -279,12 +280,14 @@ export function RecurringSheet({
             {/* ── Start & End date ─────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
               <Field>
-                <FieldLabel htmlFor="re-start">Start date</FieldLabel>
-                <Input
-                  id="re-start"
-                  type="date"
+                <FieldLabel>Start date</FieldLabel>
+                <DatePicker
+                  value={form.watch("start_date") ?? ""}
+                  onChange={(v) =>
+                    form.setValue("start_date", v, { shouldValidate: true })
+                  }
+                  placeholder="Pick start date"
                   disabled={isLoading}
-                  {...form.register("start_date")}
                 />
                 {form.formState.errors.start_date && (
                   <FieldDescription className="text-destructive">
@@ -294,17 +297,17 @@ export function RecurringSheet({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="re-end">
+                <FieldLabel>
                   End date{" "}
                   <span className="font-normal text-muted-foreground">
                     (optional)
                   </span>
                 </FieldLabel>
-                <Input
-                  id="re-end"
-                  type="date"
+                <DatePicker
+                  value={form.watch("end_date") ?? ""}
+                  onChange={(v) => form.setValue("end_date", v || null)}
+                  placeholder="No end date"
                   disabled={isLoading}
-                  {...form.register("end_date")}
                 />
               </Field>
             </div>

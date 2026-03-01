@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { ChevronLeft, ChevronRight } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
 import { getTransactions } from "@/actions/transactions";
 import { useDebounce } from "@/hooks/use-debounce";
+import { formatCurrency, todayISO } from "@/lib/format";
+import { MONTH_LABELS } from "@/schema/income-sources";
 import { TransactionsFilters, type FilterState } from "./transactions-filters";
 import { TransactionsList } from "./transactions-list";
 import { TransactionSheet } from "./transaction-sheet";
@@ -30,9 +33,24 @@ const EMPTY_FILTERS: FilterState = {
   search: "",
   categoryId: "",
   paymentMethod: "",
-  dateFrom: "",
-  dateTo: "",
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function monthDateRange(month: number, year: number) {
+  const mm = String(month).padStart(2, "0");
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    date_from: `${year}-${mm}-01`,
+    date_to: `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+/** Parse today's IST date into { month, year } */
+function istToday() {
+  const [y, m] = todayISO().split("-").map(Number);
+  return { month: m, year: y };
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -41,6 +59,10 @@ export function TransactionsContent({
   initialTotal,
   categories,
 }: TransactionsContentProps) {
+  const { month: todayMonth, year: todayYear } = istToday();
+  const [month, setMonth] = useState(todayMonth);
+  const [year, setYear] = useState(todayYear);
+
   const [transactions, setTransactions] =
     useState<TransactionWithCategory[]>(initialTransactions);
   const [total, setTotal] = useState(initialTotal);
@@ -56,7 +78,7 @@ export function TransactionsContent({
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Build the Supabase filter object — always locked to expense type
+  // Build the Supabase filter object — always locked to expense type + current month
   const activeFilters = useMemo<TransactionFilters>(
     () => ({
       type: "expense",
@@ -65,17 +87,10 @@ export function TransactionsContent({
       payment_method: (filters.paymentMethod || undefined) as
         | TransactionFilters["payment_method"]
         | undefined,
-      date_from: filters.dateFrom || undefined,
-      date_to: filters.dateTo || undefined,
+      ...monthDateRange(month, year),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      debouncedSearch,
-      filters.categoryId,
-      filters.paymentMethod,
-      filters.dateFrom,
-      filters.dateTo,
-    ],
+    [debouncedSearch, filters.categoryId, filters.paymentMethod, month, year],
   );
 
   // Re-fetch whenever active filters change; always reset to page 1
@@ -92,7 +107,7 @@ export function TransactionsContent({
     });
   }, [activeFilters]);
 
-  // Re-fetch after any mutation (create / update / delete) — updates list instantly
+  // Re-fetch after any mutation (create / update / delete)
   const handleRefresh = useCallback(() => {
     setPage(1);
     startTransition(async () => {
@@ -104,17 +119,29 @@ export function TransactionsContent({
     });
   }, [activeFilters]);
 
-  // Count of non-empty filter fields
+  // Count of non-empty filter fields (excludes month/year which are always active)
   const activeFilterCount = useMemo(
-    () =>
-      [
-        filters.categoryId,
-        filters.paymentMethod,
-        filters.dateFrom,
-        filters.dateTo,
-      ].filter(Boolean).length,
+    () => [filters.categoryId, filters.paymentMethod].filter(Boolean).length,
     [filters],
   );
+
+  // Monthly total amount from loaded transactions
+  const monthlyAmount = useMemo(
+    () => transactions.reduce((sum, tx) => sum + tx.amount, 0),
+    [transactions],
+  );
+
+  // ── Month navigation ──────────────────────────────────────────────
+
+  function goToPrevMonth() {
+    if (month === 1) { setMonth(12); setYear((y) => y - 1); }
+    else setMonth((m) => m - 1);
+  }
+
+  function goToNextMonth() {
+    if (month === 12) { setMonth(1); setYear((y) => y + 1); }
+    else setMonth((m) => m + 1);
+  }
 
   // ── Filter handlers ───────────────────────────────────────────────
 
@@ -164,6 +191,43 @@ export function TransactionsContent({
   return (
     <>
       <div className="flex flex-col gap-5">
+        {/* ── Heading ───────────────────────────────────────────────── */}
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Expenses</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {total > 0
+              ? `${formatCurrency(monthlyAmount)} spent · ${total} expense${total !== 1 ? "s" : ""}`
+              : `No expenses in ${MONTH_LABELS[month - 1]} ${year}`}
+          </p>
+
+          {/* Month navigator — left-aligned below heading */}
+          <div className="mt-3 flex items-center gap-1">
+            <button
+              onClick={goToPrevMonth}
+              className="flex size-8 items-center justify-center rounded-md border transition-colors hover:bg-muted"
+              disabled={isPending}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex min-w-36 items-center justify-center">
+              {isPending ? (
+                <Spinner />
+              ) : (
+                <span className="text-sm font-semibold">
+                  {MONTH_LABELS[month - 1]} {year}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={goToNextMonth}
+              className="flex size-8 items-center justify-center rounded-md border transition-colors hover:bg-muted"
+              disabled={isPending}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
         {/* Filters */}
         <TransactionsFilters
           filters={filters}

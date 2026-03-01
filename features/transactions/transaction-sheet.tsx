@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Sheet,
   SheetContent,
@@ -210,12 +211,12 @@ export function TransactionSheet({
 
             {/* ── Date ────────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-date">Date</FieldLabel>
-              <Input
-                id="tx-date"
-                type="date"
+              <FieldLabel>Date</FieldLabel>
+              <DatePicker
+                value={form.watch("date")}
+                onChange={(v) => form.setValue("date", v, { shouldValidate: true })}
+                placeholder="Pick a date"
                 disabled={isLoading}
-                {...form.register("date")}
               />
               {form.formState.errors.date && (
                 <FieldDescription className="text-destructive">
