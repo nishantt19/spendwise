@@ -230,7 +230,7 @@ export function TransactionSheet({
                     expenseCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         <span className="flex items-center gap-2">
-                          <CategoryIcon name={cat.name} size={13} />
+                          <CategoryIcon icon={cat.icon} size={13} />
                           <span>{cat.name}</span>
                         </span>
                       </SelectItem>

@@ -266,11 +266,7 @@ function RecentExpenseRow({ tx }: { tx: TransactionWithCategory }) {
           border: `1px solid ${cat?.color ?? "#6b7280"}30`,
         }}
       >
-        <CategoryIcon
-          name={cat?.name ?? ""}
-          size={14}
-          color={cat?.color ?? "#6b7280"}
-        />
+        <CategoryIcon icon={cat?.icon} size={14} />
       </div>
 
       {/* Description + category */}
@@ -316,11 +312,7 @@ function UpcomingRecurringRow({ expense }: { expense: RecurringWithCategory }) {
           border: `1px solid ${cat?.color ?? "#6b7280"}30`,
         }}
       >
-        <CategoryIcon
-          name={cat?.name ?? ""}
-          size={14}
-          color={cat?.color ?? "#6b7280"}
-        />
+        <CategoryIcon icon={cat?.icon} size={14} />
       </div>
 
       {/* Name + frequency + due date */}

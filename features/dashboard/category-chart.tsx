@@ -21,7 +21,7 @@ function CustomTooltip({
   return (
     <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-xs">
       <div className="flex items-center gap-1.5 mb-1">
-        <CategoryIcon name={d.name} size={12} className="text-muted-foreground" />
+        <CategoryIcon icon={d.icon} size={12} className="text-muted-foreground" />
         <span className="font-semibold text-foreground">{d.name}</span>
       </div>
       <p className="text-muted-foreground">
@@ -80,7 +80,7 @@ export function CategoryChart({ data, total }: CategoryChartProps) {
               style={{ background: cat.color }}
             />
             <span className="flex flex-1 items-center gap-1 truncate text-muted-foreground">
-              <CategoryIcon name={cat.name} size={11} />
+              <CategoryIcon icon={cat.icon} size={11} />
               <span className="truncate">{cat.name}</span>
             </span>
             <span className="shrink-0 font-medium tabular-nums text-foreground">

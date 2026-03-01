@@ -309,7 +309,7 @@ function RecurringCard({
           border: `1px solid ${color}30`,
         }}
       >
-        <CategoryIcon name={cat?.name ?? ""} size={14} color={color} />
+        <CategoryIcon icon={cat?.icon} size={14} />
       </div>
 
       {/* Content */}
@@ -419,7 +419,7 @@ function RecurringRow({
               border: `1px solid ${color}30`,
             }}
           >
-            <CategoryIcon name={cat?.name ?? ""} size={13} color={color} />
+            <CategoryIcon icon={cat?.icon} size={13} />
           </div>
           <span className="max-w-28 sm:max-w-40 truncate font-medium text-error sm:text-sm">
             {expense.name}

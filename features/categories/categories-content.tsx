@@ -144,7 +144,7 @@ function CategoryCard({
           border: `1.5px solid ${category.color}33`,
         }}
       >
-        <CategoryIcon name={category.name} size={20} color={category.color} />
+        <CategoryIcon icon={category.icon} size={20} />
       </div>
 
       {/* Name + default badge */}
