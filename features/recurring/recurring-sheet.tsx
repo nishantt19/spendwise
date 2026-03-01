@@ -43,6 +43,7 @@ import {
   deleteRecurringExpense,
 } from "@/actions/recurring";
 import { todayISO } from "@/lib/format";
+import { CategoryIcon } from "@/lib/category-icons";
 import type { Category } from "@/types/categories";
 import type { RecurringFormData, RecurringWithCategory } from "@/types/recurring";
 
@@ -236,7 +237,7 @@ export function RecurringSheet({
                     expenseCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         <span className="flex items-center gap-2">
-                          <span>{cat.icon ?? "📁"}</span>
+                          <CategoryIcon name={cat.name} size={13} />
                           <span>{cat.name}</span>
                         </span>
                       </SelectItem>

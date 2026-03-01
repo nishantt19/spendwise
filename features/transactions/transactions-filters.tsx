@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "@/schema/transactions";
+import { CategoryIcon } from "@/lib/category-icons";
 import type { Category } from "@/types/categories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ export function TransactionsFilters({
             {categories.filter((c) => c.type === "expense").map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 <span className="flex items-center gap-1.5">
-                  <span>{cat.icon ?? "📁"}</span>
+                  <CategoryIcon name={cat.name} size={13} />
                   <span>{cat.name}</span>
                 </span>
               </SelectItem>

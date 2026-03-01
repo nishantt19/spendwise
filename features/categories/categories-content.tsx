@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "@untitledui/icons";
+import { CategoryIcon } from "@/lib/category-icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,13 +139,13 @@ function CategoryCard({
     >
       {/* Category icon */}
       <div
-        className="flex size-12 items-center justify-center rounded-xl text-2xl"
+        className="flex size-12 items-center justify-center rounded-xl"
         style={{
           backgroundColor: `${category.color}1a`,
           border: `1.5px solid ${category.color}33`,
         }}
       >
-        {category.icon ?? "📁"}
+        <CategoryIcon name={category.name} size={22} color={category.color} />
       </div>
 
       {/* Name + default badge */}
@@ -164,7 +165,7 @@ function CategoryCard({
 
       {/* Colour accent bar — animates in on hover */}
       <span
-        className="absolute bottom-0 left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full opacity-50 transition-all duration-200 group-hover:w-3/4 group-hover:opacity-100"
+        className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full opacity-50 transition-all duration-200 group-hover:w-3/4 group-hover:opacity-100"
         style={{ backgroundColor: category.color }}
       />
     </button>

@@ -3,6 +3,7 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import { formatCurrency } from "@/lib/format";
+import { CategoryIcon } from "@/lib/category-icons";
 import type { CategoryStat } from "@/actions/dashboard";
 
 // ─── Custom tooltip ───────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ function CustomTooltip({
   return (
     <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-xs">
       <div className="flex items-center gap-1.5 mb-1">
-        {d.icon && <span>{d.icon}</span>}
+        <CategoryIcon name={d.name} size={12} className="text-muted-foreground" />
         <span className="font-semibold text-foreground">{d.name}</span>
       </div>
       <p className="text-muted-foreground">
@@ -78,9 +79,9 @@ export function CategoryChart({ data, total }: CategoryChartProps) {
               className="size-2.5 shrink-0 rounded-sm"
               style={{ background: cat.color }}
             />
-            <span className="flex-1 truncate text-muted-foreground">
-              {cat.icon ? `${cat.icon} ` : ""}
-              {cat.name}
+            <span className="flex flex-1 items-center gap-1 truncate text-muted-foreground">
+              <CategoryIcon name={cat.name} size={11} />
+              <span className="truncate">{cat.name}</span>
             </span>
             <span className="shrink-0 font-medium tabular-nums text-foreground">
               {formatCurrency(cat.amount)}

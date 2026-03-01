@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { PAYMENT_METHOD_LABELS } from "@/schema/transactions";
 import { formatCurrency } from "@/lib/format";
 import { softDeleteTransaction } from "@/actions/transactions";
+import { CategoryIcon } from "@/lib/category-icons";
 import type { TransactionWithCategory } from "@/types/transactions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,7 +91,6 @@ function TransactionRow({
 }) {
   const cat = tx.category;
   const color = cat?.color ?? "#6b7280";
-  const icon = cat?.icon ?? "💸";
   const [isDeleting, startDeleteTransition] = useTransition();
 
   function handleDelete(e: React.MouseEvent) {
@@ -121,10 +121,10 @@ function TransactionRow({
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
           <div
-            className="flex size-7 shrink-0 items-center justify-center rounded-md text-sm"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md"
             style={{ backgroundColor: `${color}1a`, border: `1px solid ${color}30` }}
           >
-            {icon}
+            <CategoryIcon name={cat?.name ?? ""} size={13} color={color} />
           </div>
           <span className="max-w-50 truncate font-medium">{tx.description}</span>
         </div>

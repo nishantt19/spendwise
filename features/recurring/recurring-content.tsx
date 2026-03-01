@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { formatCurrency, formatNextDueDate, type DueDateStatus } from "@/lib/format";
+import { CategoryIcon } from "@/lib/category-icons";
 import {
   RECURRING_FREQUENCY_LABELS,
   RECURRING_MONTHLY_MULTIPLIERS,
@@ -274,19 +275,11 @@ function RecurringRow({
                 border: `1px solid ${cat.color}30`,
               }}
             >
-              {cat.icon ? (
-                <span className="text-xs leading-none">{cat.icon}</span>
-              ) : (
-                <RefreshCw04 size={13} style={{ color: cat.color }} />
-              )}
+              <CategoryIcon name={cat.name} size={13} color={cat.color} />
             </div>
           ) : (
             <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted">
-              {cat?.icon ? (
-                <span className="text-xs leading-none">{cat.icon}</span>
-              ) : (
-                <RefreshCw04 size={13} className="text-muted-foreground" />
-              )}
+              <CategoryIcon name={cat?.name ?? ""} size={13} className="text-muted-foreground" />
             </div>
           )}
           <span className="max-w-40 truncate font-medium">{expense.name}</span>
@@ -321,14 +314,7 @@ function RecurringRow({
 
       {/* Category */}
       <td className="px-4 py-3 text-muted-foreground">
-        {cat ? (
-          <span className="flex items-center gap-1.5">
-            {cat.icon && <span>{cat.icon}</span>}
-            <span>{cat.name}</span>
-          </span>
-        ) : (
-          <span className="text-muted-foreground/50">—</span>
-        )}
+        {cat ? cat.name : <span className="text-muted-foreground/50">—</span>}
       </td>
 
       {/* Next due date */}
