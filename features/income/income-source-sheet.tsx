@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useTransition, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
@@ -12,10 +12,9 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import {
   Select,
@@ -24,11 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 
 import {
   incomeSourceSchema,
@@ -41,7 +36,10 @@ import {
   updateIncomeSource,
   deleteIncomeSource,
 } from "@/actions/income-sources";
-import type { IncomeSource, IncomeSourceFormData } from "@/types/income-sources";
+import type {
+  IncomeSource,
+  IncomeSourceFormData,
+} from "@/types/income-sources";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,21 +66,44 @@ export function IncomeSourceSheet({
   const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const form = useForm<IncomeSourceFormData>({
+  const {
+    register,
+    reset,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<IncomeSourceFormData>({
     resolver: zodResolver(incomeSourceSchema),
     defaultValues: buildDefaults(null, defaultMonth, defaultYear),
   });
 
-  const isLoading = isSaving || isDeleting;
-  const watchedIsReceived = form.watch("is_received");
+  const watchIsReceived = useWatch({
+    control,
+    name: "is_received",
+  });
 
-  // Sync form when sheet opens or source changes
+  const watchMonth = useWatch({
+    control,
+    name: "month",
+  });
+
+  const watchYear = useWatch({
+    control,
+    name: "year",
+  });
+
+  const watchSourceType = useWatch({
+    control,
+    name: "source_type",
+  });
+
+  const isLoading = isSaving || isDeleting;
+
   useEffect(() => {
     if (!open) return;
-    setConfirmDelete(false);
-    form.reset(buildDefaults(source ?? null, defaultMonth, defaultYear));
-  }, [open, source, defaultMonth, defaultYear, form]);
+    reset(buildDefaults(source ?? null, defaultMonth, defaultYear));
+  }, [open, source, defaultMonth, defaultYear, reset]);
 
   function onSubmit(values: IncomeSourceFormData) {
     startSaveTransition(async () => {
@@ -116,59 +137,68 @@ export function IncomeSourceSheet({
     });
   }
 
-  // Year options: 5 years back to 5 years forward
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-md" side="right">
-        <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle>
+      {/* Mobile: 95vw wide. sm+: standard max-w-md */}
+      <SheetContent
+        className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
+        side="right"
+      >
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <SheetHeader className="border-b px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+          <SheetTitle className="text-base sm:text-lg">
             {isEditing ? "Edit income source" : "New income source"}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-xs sm:text-sm">
             {isEditing
               ? "Update the details of this income source."
               : "Add an expected income entry for the selected month."}
           </SheetDescription>
         </SheetHeader>
 
+        {/* ── Scrollable body + fixed footer, wrapped in form ────────── */}
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-1 flex-col overflow-y-auto"
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col min-h-0 overflow-hidden"
         >
-          <div className="flex flex-col gap-5 px-6 py-5">
-            {/* ── Name ─────────────────────────────────────────────────── */}
+          {/* Scrollable fields */}
+          <div className="flex flex-col gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
+            {/* ── Name ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="is-name">Name</FieldLabel>
+              <FieldLabel htmlFor="is-name" className="text-xs sm:text-sm">
+                Name
+              </FieldLabel>
               <Input
                 id="is-name"
                 placeholder="e.g. Main Salary, Freelance Project"
                 disabled={isLoading}
-                {...form.register("name")}
+                className="text-xs sm:text-sm"
+                {...register("name")}
               />
-              {form.formState.errors.name && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.name.message}
+              {errors.name && (
+                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                  {errors.name.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Source type ───────────────────────────────────────────── */}
+            {/* ── Source type ──────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Type</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">Type</FieldLabel>
               <Select
-                value={form.watch("source_type")}
+                value={watchSourceType}
                 onValueChange={(val) =>
-                  form.setValue(
+                  setValue(
                     "source_type",
                     val as IncomeSourceFormData["source_type"],
                   )
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full text-xs sm:text-sm">
                   <SelectValue placeholder="Select income type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,18 +209,20 @@ export function IncomeSourceSheet({
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.source_type && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.source_type.message}
+              {errors.source_type && (
+                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                  {errors.source_type.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Amount ───────────────────────────────────────────────── */}
+            {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="is-amount">Expected amount</FieldLabel>
+              <FieldLabel htmlFor="is-amount" className="text-xs sm:text-sm">
+                Expected amount
+              </FieldLabel>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -200,29 +232,27 @@ export function IncomeSourceSheet({
                   min="0"
                   placeholder="0.00"
                   disabled={isLoading}
-                  className="pl-7"
-                  {...form.register("amount", { valueAsNumber: true })}
+                  className="pl-7 text-xs sm:text-sm"
+                  {...register("amount", { valueAsNumber: true })}
                 />
               </div>
-              {form.formState.errors.amount && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.amount.message}
+              {errors.amount && (
+                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                  {errors.amount.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Month & Year ──────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* ── Month & Year ─────────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <Field>
-                <FieldLabel>Month</FieldLabel>
+                <FieldLabel className="text-xs sm:text-sm">Month</FieldLabel>
                 <Select
-                  value={String(form.watch("month"))}
-                  onValueChange={(val) =>
-                    form.setValue("month", Number(val))
-                  }
+                  value={String(watchMonth)}
+                  onValueChange={(val) => setValue("month", Number(val))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full text-xs sm:text-sm">
                     <SelectValue placeholder="Month" />
                   </SelectTrigger>
                   <SelectContent>
@@ -236,15 +266,13 @@ export function IncomeSourceSheet({
               </Field>
 
               <Field>
-                <FieldLabel>Year</FieldLabel>
+                <FieldLabel className="text-xs sm:text-sm">Year</FieldLabel>
                 <Select
-                  value={String(form.watch("year"))}
-                  onValueChange={(val) =>
-                    form.setValue("year", Number(val))
-                  }
+                  value={String(watchYear)}
+                  onValueChange={(val) => setValue("year", Number(val))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full text-xs sm:text-sm">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -258,34 +286,36 @@ export function IncomeSourceSheet({
               </Field>
             </div>
 
-            {/* ── Status ───────────────────────────────────────────────── */}
+            {/* ── Status ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Status</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">Status</FieldLabel>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
-                  variant={!watchedIsReceived ? "default" : "outline"}
-                  className="w-full"
+                  size="sm"
+                  variant={!watchIsReceived ? "default" : "outline"}
+                  className="w-full text-xs sm:text-sm"
                   disabled={isLoading}
-                  onClick={() => form.setValue("is_received", false)}
+                  onClick={() => setValue("is_received", false)}
                 >
                   Pending
                 </Button>
                 <Button
                   type="button"
-                  variant={watchedIsReceived ? "default" : "outline"}
-                  className="w-full"
+                  size="sm"
+                  variant={watchIsReceived ? "default" : "outline"}
+                  className="w-full text-xs sm:text-sm"
                   disabled={isLoading}
-                  onClick={() => form.setValue("is_received", true)}
+                  onClick={() => setValue("is_received", true)}
                 >
                   Received
                 </Button>
               </div>
             </Field>
 
-            {/* ── Note ─────────────────────────────────────────────────── */}
+            {/* ── Note ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="is-note">
+              <FieldLabel htmlFor="is-note" className="text-xs sm:text-sm">
                 Note{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -296,19 +326,19 @@ export function IncomeSourceSheet({
                 placeholder="e.g. Paid on the 1st of each month"
                 rows={3}
                 disabled={isLoading}
-                className="resize-none"
-                {...form.register("note")}
+                className="resize-none text-xs sm:text-sm"
+                {...register("note")}
               />
-              {form.formState.errors.note && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.note.message}
+              {errors.note && (
+                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                  {errors.note.message}
                 </FieldDescription>
               )}
             </Field>
           </div>
 
-          {/* ── Footer ───────────────────────────────────────────────────── */}
-          <SheetFooter className="mt-auto flex-col gap-2 border-t px-6 py-4">
+          {/* ── Footer ─────────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-2 border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
             {/* Delete row — edit mode only */}
             {isEditing && (
               <div className="flex w-full items-center gap-2">
@@ -318,20 +348,21 @@ export function IncomeSourceSheet({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete source
                   </Button>
                 ) : (
                   <>
-                    <span className="flex-1 text-sm text-muted-foreground">
+                    <span className="flex-1 text-xs text-muted-foreground">
                       Are you sure?
                     </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
+                      className="text-xs sm:text-sm"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -341,6 +372,7 @@ export function IncomeSourceSheet({
                       type="button"
                       variant="destructive"
                       size="sm"
+                      className="text-xs sm:text-sm"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -359,20 +391,26 @@ export function IncomeSourceSheet({
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1" disabled={isLoading}>
+              <Button
+                type="submit"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm"
+                disabled={isLoading}
+              >
                 <span className="flex items-center justify-center gap-1.5">
                   {isSaving ? <Spinner /> : ""}
                   {isEditing ? "Save changes" : "Add source"}
                 </span>
               </Button>
             </div>
-          </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>
@@ -401,7 +439,6 @@ function buildDefaults(
   return {
     name: "",
     source_type: "salary" as const,
-    // amount omitted → renders as blank number input
     month: defaultMonth,
     year: defaultYear,
     is_received: false,

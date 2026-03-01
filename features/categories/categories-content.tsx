@@ -42,41 +42,40 @@ export function CategoriesContent({ expense, income }: CategoriesContentProps) {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as CategoryType)}
       >
-        <div className="flex items-center justify-between">
-          <TabsList className="h-9">
-            <TabsTrigger value="expense" className="gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <TabsList className="h-8 sm:h-9">
+            <TabsTrigger value="expense" className="gap-1 sm:gap-1.5 text-xs sm:text-sm">
               Expense
               <Badge
                 variant="secondary"
-                className="h-4 px-1.5 text-[10px] font-normal"
+                className="h-4 px-1.5 text-1.5xs font-normal"
               >
                 {expense.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="income" className="gap-1.5">
+            <TabsTrigger value="income" className="gap-1 sm:gap-1.5 text-xs sm:text-sm">
               Income
               <Badge
                 variant="secondary"
-                className="h-4 px-1.5 text-[10px] font-normal"
+                className="h-4 px-1.5 text-1.5xs font-normal"
               >
                 {income.length}
               </Badge>
             </TabsTrigger>
           </TabsList>
 
-          <Button size="sm" onClick={openCreate}>
-            <span className="flex items-center justify-center gap-1.5">
-              <Plus size={15} />
-              New Category
-            </span>
+          <Button size="sm" className="gap-1.5 shrink-0" onClick={openCreate}>
+            <Plus size={15} />
+            <span className="hidden sm:inline">New Category</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
 
-        <TabsContent value="expense" className="mt-6">
+        <TabsContent value="expense" className="mt-4 sm:mt-6">
           <CategoryGrid categories={expense} onEdit={openEdit} />
         </TabsContent>
 
-        <TabsContent value="income" className="mt-6">
+        <TabsContent value="income" className="mt-4 sm:mt-6">
           <CategoryGrid categories={income} onEdit={openEdit} />
         </TabsContent>
       </Tabs>
@@ -102,12 +101,12 @@ function CategoryGrid({
 }) {
   if (categories.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="mb-3 flex size-14 items-center justify-center rounded-full bg-muted">
-          <span className="text-2xl">📂</span>
+      <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center">
+        <div className="mb-3 flex size-12 sm:size-14 items-center justify-center rounded-full bg-muted">
+          <span className="text-xl sm:text-2xl">📂</span>
         </div>
-        <p className="text-sm font-medium">No categories yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm font-medium">No categories yet</p>
+        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
           Create your first category to start organising transactions.
         </p>
       </div>
@@ -115,7 +114,7 @@ function CategoryGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {categories.map((category) => (
         <CategoryCard key={category.id} category={category} onEdit={onEdit} />
       ))}
@@ -135,28 +134,28 @@ function CategoryCard({
   return (
     <button
       onClick={() => onEdit(category)}
-      className="group relative flex w-full flex-col items-center gap-2.5 overflow-hidden rounded-xl border bg-card px-3 py-4 text-center text-card-foreground transition-all duration-150 hover:border-primary/30 hover:shadow-sm"
+      className="group relative flex w-full flex-col items-center gap-2 sm:gap-2.5 overflow-hidden rounded-xl border bg-card px-3 py-3 sm:py-4 text-center text-card-foreground transition-all duration-150 hover:border-primary/30 hover:shadow-sm"
     >
       {/* Category icon */}
       <div
-        className="flex size-12 items-center justify-center rounded-xl"
+        className="flex size-10 sm:size-12 items-center justify-center rounded-xl"
         style={{
           backgroundColor: `${category.color}1a`,
           border: `1.5px solid ${category.color}33`,
         }}
       >
-        <CategoryIcon name={category.name} size={22} color={category.color} />
+        <CategoryIcon name={category.name} size={20} color={category.color} />
       </div>
 
       {/* Name + default badge */}
       <div className="w-full space-y-1">
-        <p className="truncate text-sm font-medium leading-tight">
+        <p className="truncate text-xs sm:text-sm font-medium leading-tight">
           {category.name}
         </p>
         {category.is_default && (
           <Badge
             variant="secondary"
-            className="h-4 px-1.5 text-[10px] font-normal"
+            className="h-4 px-1.5 text-1.5xs font-normal"
           >
             Default
           </Badge>

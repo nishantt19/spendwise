@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight } from "@untitledui/icons";
 
@@ -9,7 +16,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { getTransactions } from "@/actions/transactions";
 import { useDebounce } from "@/hooks/use-debounce";
-import { formatCurrency, todayISO } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { MONTH_LABELS } from "@/schema/income-sources";
 import { TransactionsFilters, type FilterState } from "./transactions-filters";
 import { TransactionsList } from "./transactions-list";
@@ -27,6 +34,8 @@ type TransactionsContentProps = {
   initialTransactions: TransactionWithCategory[];
   initialTotal: number;
   categories: Category[];
+  initialMonth: number;
+  initialYear: number;
 };
 
 const EMPTY_FILTERS: FilterState = {
@@ -46,22 +55,17 @@ function monthDateRange(month: number, year: number) {
   };
 }
 
-/** Parse today's IST date into { month, year } */
-function istToday() {
-  const [y, m] = todayISO().split("-").map(Number);
-  return { month: m, year: y };
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function TransactionsContent({
   initialTransactions,
   initialTotal,
   categories,
+  initialMonth,
+  initialYear,
 }: TransactionsContentProps) {
-  const { month: todayMonth, year: todayYear } = istToday();
-  const [month, setMonth] = useState(todayMonth);
-  const [year, setYear] = useState(todayYear);
+  const [month, setMonth] = useState(initialMonth);
+  const [year, setYear] = useState(initialYear);
 
   const [transactions, setTransactions] =
     useState<TransactionWithCategory[]>(initialTransactions);
@@ -89,12 +93,17 @@ export function TransactionsContent({
         | undefined,
       ...monthDateRange(month, year),
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [debouncedSearch, filters.categoryId, filters.paymentMethod, month, year],
   );
 
-  // Re-fetch whenever active filters change; always reset to page 1
+  // Skip the very first run — initial data from the server already matches the filters.
+  // Only re-fetch when the user actually changes month, search, or filter values.
+  const isFirstRender = useRef(true);
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setPage(1);
     startTransition(async () => {
       const result = await getTransactions(activeFilters, 1);
@@ -134,13 +143,17 @@ export function TransactionsContent({
   // ── Month navigation ──────────────────────────────────────────────
 
   function goToPrevMonth() {
-    if (month === 1) { setMonth(12); setYear((y) => y - 1); }
-    else setMonth((m) => m - 1);
+    if (month === 1) {
+      setMonth(12);
+      setYear((y) => y - 1);
+    } else setMonth((m) => m - 1);
   }
 
   function goToNextMonth() {
-    if (month === 12) { setMonth(1); setYear((y) => y + 1); }
-    else setMonth((m) => m + 1);
+    if (month === 12) {
+      setMonth(1);
+      setYear((y) => y + 1);
+    } else setMonth((m) => m + 1);
   }
 
   // ── Filter handlers ───────────────────────────────────────────────
@@ -190,17 +203,19 @@ export function TransactionsContent({
 
   return (
     <>
-      <div className="flex flex-col gap-5">
-        {/* ── Heading ───────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:gap-5">
+        {/* ── Heading + month navigator ─────────────────────────────── */}
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Expenses</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+            Expenses
+          </h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
             {total > 0
               ? `${formatCurrency(monthlyAmount)} spent · ${total} expense${total !== 1 ? "s" : ""}`
               : `No expenses in ${MONTH_LABELS[month - 1]} ${year}`}
           </p>
 
-          {/* Month navigator — left-aligned below heading */}
+          {/* Month navigator */}
           <div className="mt-3 flex items-center gap-1">
             <button
               onClick={goToPrevMonth}
@@ -209,11 +224,11 @@ export function TransactionsContent({
             >
               <ChevronLeft size={16} />
             </button>
-            <div className="flex min-w-36 items-center justify-center">
+            <div className="flex min-w-24 sm:min-w-36 items-center justify-center">
               {isPending ? (
                 <Spinner />
               ) : (
-                <span className="text-sm font-semibold">
+                <span className="text-xs sm:text-error md:text-sm font-semibold">
                   {MONTH_LABELS[month - 1]} {year}
                 </span>
               )}

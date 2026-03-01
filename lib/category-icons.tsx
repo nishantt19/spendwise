@@ -13,6 +13,10 @@ import {
   CurrencyRupee,
   CoinsStacked03,
   Snowflake02,
+  Laptop01,
+  Gift02,
+  Activity,
+  Wallet02,
 } from "@untitledui/icons";
 import type { ComponentType, CSSProperties } from "react";
 
@@ -28,26 +32,36 @@ type IconProps = {
 // ─── Name → icon map ──────────────────────────────────────────────────────────
 
 const CATEGORY_ICON_MAP: Record<string, ComponentType<IconProps>> = {
-  "education": BookOpen01,
-  "entertainment": VideoRecorder,
-  "hospital": MedicalCross,
-  "housing": Home03,
+  // ── Expense categories ────────────────────────────────────────────────
+  education: BookOpen01,
+  entertainment: VideoRecorder,
+  healthcare: MedicalCross,
+  hospital: MedicalCross,
+  housing: Home03,
   "personal care": User03,
-  "shopping": ShoppingCart03,
-  "groceries": ShoppingBag03,
-  "subscription": CreditCardRefresh,
-  "subscriptions": CreditCardRefresh,
-  "transportation": Car01,
-  "travel": Plane,
-  "utilities": Flash,
+  shopping: ShoppingCart03,
+  groceries: ShoppingBag03,
+  subscription: CreditCardRefresh,
+  subscriptions: CreditCardRefresh,
+  transportation: Car01,
+  travel: Plane,
+  utilities: Flash,
   "self transfer": CurrencyRupee,
-  "others": CoinsStacked03,
-  "other": CoinsStacked03,
   "food and dining": Snowflake02,
   "food & dining": Snowflake02,
+  // ── Income categories ─────────────────────────────────────────────────
+  freelance: Laptop01,
+  gift: Gift02,
+  "investment return": Activity,
+  salary: Wallet02,
+  // ── Fallback ──────────────────────────────────────────────────────────
+  others: CurrencyRupee,
+  other: CurrencyRupee,
 };
 
-export function getCategoryIconComponent(name: string): ComponentType<IconProps> {
+export function getCategoryIconComponent(
+  name: string,
+): ComponentType<IconProps> {
   return CATEGORY_ICON_MAP[name.toLowerCase()] ?? CoinsStacked03;
 }
 
@@ -67,5 +81,6 @@ export function CategoryIcon({
   style?: CSSProperties;
 }) {
   const Icon = getCategoryIconComponent(name);
+  // eslint-disable-next-line react-hooks/static-components
   return <Icon size={size} color={color} className={className} style={style} />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
@@ -14,7 +14,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -25,11 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 
 import {
   recurringSchema,
@@ -45,7 +40,10 @@ import {
 import { todayISO } from "@/lib/format";
 import { CategoryIcon } from "@/lib/category-icons";
 import type { Category } from "@/types/categories";
-import type { RecurringFormData, RecurringWithCategory } from "@/types/recurring";
+import type {
+  RecurringFormData,
+  RecurringWithCategory,
+} from "@/types/recurring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,19 +71,54 @@ export function RecurringSheet({
 
   const expenseCategories = categories.filter((c) => c.type === "expense");
 
-  const form = useForm<RecurringFormData>({
+  const {
+    register,
+    reset,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<RecurringFormData>({
     resolver: zodResolver(recurringSchema),
     defaultValues: buildDefaults(null),
   });
 
   const isLoading = isSaving || isDeleting;
-  const watchedIsActive = form.watch("is_active");
+
+  const watchedIsActive = useWatch({
+    control,
+    name: "is_active",
+  });
+
+  const watchFrequency = useWatch({
+    control,
+    name: "frequency",
+  });
+
+  const watchCategory = useWatch({
+    control,
+    name: "category_id",
+  });
+
+  const watchPaymentMethod = useWatch({
+    control,
+    name: "payment_method",
+  });
+
+  const watchStartDate = useWatch({
+    control,
+    name: "start_date",
+  });
+
+  const watchEndDate = useWatch({
+    control,
+    name: "end_date",
+  });
 
   useEffect(() => {
     if (!open) return;
-    setConfirmDelete(false);
-    form.reset(buildDefaults(expense ?? null));
-  }, [open, expense, form]);
+    reset(buildDefaults(expense ?? null));
+  }, [open, expense, reset]);
 
   function onSubmit(values: RecurringFormData) {
     startSaveTransition(async () => {
@@ -121,44 +154,56 @@ export function RecurringSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-md" side="right">
-        <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle>
+      {/* Mobile: 95vw wide. sm+: standard max-w-md */}
+      <SheetContent
+        className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
+        side="right"
+      >
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <SheetHeader className="border-b px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+          <SheetTitle className="text-base sm:text-lg">
             {isEditing ? "Edit recurring expense" : "New recurring expense"}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-xs sm:text-sm">
             {isEditing
               ? "Update the details of this recurring expense."
               : "Set up an expense that repeats on a schedule."}
           </SheetDescription>
         </SheetHeader>
 
+        {/* ── Scrollable body + fixed footer, wrapped in form ────────── */}
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-1 flex-col overflow-y-auto"
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col min-h-0 overflow-hidden"
         >
-          <div className="flex flex-col gap-5 px-6 py-5">
-            {/* ── Name ─────────────────────────────────────────────────── */}
+          {/* Scrollable fields */}
+          <div className="flex flex-col gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
+            {/* ── Name ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="re-name">Name</FieldLabel>
+              <FieldLabel htmlFor="re-name" className="text-xs sm:text-sm">
+                Name
+              </FieldLabel>
               <Input
                 id="re-name"
                 placeholder="e.g. Gym Membership, Netflix"
                 disabled={isLoading}
-                {...form.register("name")}
+                className="text-xs sm:text-sm"
+                {...register("name")}
               />
-              {form.formState.errors.name && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.name.message}
+              {errors.name && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.name.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Amount ───────────────────────────────────────────────── */}
+            {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="re-amount">Amount</FieldLabel>
+              <FieldLabel htmlFor="re-amount" className="text-xs sm:text-sm">
+                Amount
+              </FieldLabel>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -168,31 +213,28 @@ export function RecurringSheet({
                   min="0"
                   placeholder="0.00"
                   disabled={isLoading}
-                  className="pl-7"
-                  {...form.register("amount", { valueAsNumber: true })}
+                  className="pl-7 text-xs sm:text-sm"
+                  {...register("amount", { valueAsNumber: true })}
                 />
               </div>
-              {form.formState.errors.amount && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.amount.message}
+              {errors.amount && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.amount.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Frequency ────────────────────────────────────────────── */}
+            {/* ── Frequency ────────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Frequency</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">Frequency</FieldLabel>
               <Select
-                value={form.watch("frequency")}
+                value={watchFrequency}
                 onValueChange={(val) =>
-                  form.setValue(
-                    "frequency",
-                    val as RecurringFormData["frequency"],
-                  )
+                  setValue("frequency", val as RecurringFormData["frequency"])
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full text-xs sm:text-sm">
                   <SelectValue placeholder="How often does this repeat?" />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,29 +245,27 @@ export function RecurringSheet({
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.frequency && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.frequency.message}
+              {errors.frequency && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.frequency.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Category ─────────────────────────────────────────────── */}
+            {/* ── Category ─────────────────────────────────────────── */}
             <Field>
-              <FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">
                 Category{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
                 </span>
               </FieldLabel>
               <Select
-                value={form.watch("category_id") ?? ""}
-                onValueChange={(val) =>
-                  form.setValue("category_id", val || null)
-                }
+                value={watchCategory ?? ""}
+                onValueChange={(val) => setValue("category_id", val || null)}
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full text-xs sm:text-sm">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -247,20 +287,22 @@ export function RecurringSheet({
               </Select>
             </Field>
 
-            {/* ── Payment method ────────────────────────────────────────── */}
+            {/* ── Payment method ────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Payment method</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">
+                Payment method
+              </FieldLabel>
               <Select
-                value={form.watch("payment_method")}
+                value={watchPaymentMethod}
                 onValueChange={(val) =>
-                  form.setValue(
+                  setValue(
                     "payment_method",
                     val as RecurringFormData["payment_method"],
                   )
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full text-xs sm:text-sm">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,79 +313,83 @@ export function RecurringSheet({
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.payment_method && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.payment_method.message}
+              {errors.payment_method && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.payment_method.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Start & End date ─────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* ── Start & End date ─────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <Field>
-                <FieldLabel>Start date</FieldLabel>
+                <FieldLabel className="text-xs sm:text-sm">
+                  Start date
+                </FieldLabel>
                 <DatePicker
-                  value={form.watch("start_date") ?? ""}
+                  value={watchStartDate ?? ""}
                   onChange={(v) =>
-                    form.setValue("start_date", v, { shouldValidate: true })
+                    setValue("start_date", v, { shouldValidate: true })
                   }
                   placeholder="Pick start date"
                   disabled={isLoading}
                 />
-                {form.formState.errors.start_date && (
-                  <FieldDescription className="text-destructive">
-                    {form.formState.errors.start_date.message}
+                {errors.start_date && (
+                  <FieldDescription className="text-destructive text-xs sm:text-sm">
+                    {errors.start_date.message}
                   </FieldDescription>
                 )}
               </Field>
 
               <Field>
-                <FieldLabel>
+                <FieldLabel className="text-xs sm:text-sm">
                   End date{" "}
                   <span className="font-normal text-muted-foreground">
                     (optional)
                   </span>
                 </FieldLabel>
                 <DatePicker
-                  value={form.watch("end_date") ?? ""}
-                  onChange={(v) => form.setValue("end_date", v || null)}
+                  value={watchEndDate ?? ""}
+                  onChange={(v) => setValue("end_date", v || null)}
                   placeholder="No end date"
                   disabled={isLoading}
                 />
               </Field>
             </div>
 
-            {/* ── Status ───────────────────────────────────────────────── */}
+            {/* ── Status ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Status</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">Status</FieldLabel>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
+                  size="sm"
                   variant={watchedIsActive ? "default" : "outline"}
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
                   disabled={isLoading}
-                  onClick={() => form.setValue("is_active", true)}
+                  onClick={() => setValue("is_active", true)}
                 >
                   Active
                 </Button>
                 <Button
                   type="button"
+                  size="sm"
                   variant={!watchedIsActive ? "default" : "outline"}
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
                   disabled={isLoading}
-                  onClick={() => form.setValue("is_active", false)}
+                  onClick={() => setValue("is_active", false)}
                 >
                   Paused
                 </Button>
               </div>
-              <FieldDescription>
-                Paused expenses won't generate new transactions.
+              <FieldDescription className="text-xs sm:text-sm">
+                {`Paused expenses won't generate new transactions.`}
               </FieldDescription>
             </Field>
 
-            {/* ── Description ──────────────────────────────────────────── */}
+            {/* ── Description ──────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="re-desc">
+              <FieldLabel htmlFor="re-desc" className="text-xs sm:text-sm">
                 Description{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -354,19 +400,20 @@ export function RecurringSheet({
                 placeholder="Any extra details..."
                 rows={3}
                 disabled={isLoading}
-                className="resize-none"
-                {...form.register("description")}
+                className="resize-none text-xs sm:text-sm"
+                {...register("description")}
               />
-              {form.formState.errors.description && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.description.message}
+              {errors.description && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.description.message}
                 </FieldDescription>
               )}
             </Field>
           </div>
 
-          {/* ── Footer ───────────────────────────────────────────────────── */}
-          <SheetFooter className="mt-auto flex-col gap-2 border-t px-6 py-4">
+          {/* ── Footer — always visible ─────────────────────────────────── */}
+          <div className="flex flex-col gap-2 border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+            {/* Delete row — only in edit mode */}
             {isEditing && (
               <div className="flex w-full items-center gap-2">
                 {!confirmDelete ? (
@@ -375,20 +422,21 @@ export function RecurringSheet({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete recurring expense
                   </Button>
                 ) : (
                   <>
-                    <span className="flex-1 text-sm text-muted-foreground">
+                    <span className="flex-1 text-xs text-muted-foreground">
                       Are you sure?
                     </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
+                      className="text-xs sm:text-sm"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -398,6 +446,7 @@ export function RecurringSheet({
                       type="button"
                       variant="destructive"
                       size="sm"
+                      className="text-xs sm:text-sm"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -411,24 +460,31 @@ export function RecurringSheet({
               </div>
             )}
 
+            {/* Save row */}
             <div className="flex w-full gap-2">
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1" disabled={isLoading}>
+              <Button
+                type="submit"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm"
+                disabled={isLoading}
+              >
                 <span className="flex items-center justify-center gap-1.5">
                   {isSaving ? <Spinner /> : ""}
                   {isEditing ? "Save changes" : "Add recurring"}
                 </span>
               </Button>
             </div>
-          </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

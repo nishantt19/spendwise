@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
@@ -13,10 +13,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import {
   Select,
@@ -25,13 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 
-import { transactionSchema, PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "@/schema/transactions";
+import {
+  transactionSchema,
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHODS,
+} from "@/schema/transactions";
 import {
   createTransaction,
   softDeleteTransaction,
@@ -72,9 +71,31 @@ export function TransactionSheet({
   // Only show expense categories — this page is expenses-only
   const expenseCategories = categories.filter((c) => c.type === "expense");
 
-  const form = useForm<TransactionFormData>({
+  const {
+    register,
+    reset,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: buildDefaults(null),
+  });
+
+  const watchCategory = useWatch({
+    control,
+    name: "category_id",
+  });
+
+  const watchDate = useWatch({
+    control,
+    name: "date",
+  });
+
+  const watchPaymentMethod = useWatch({
+    control,
+    name: "payment_method",
   });
 
   const isLoading = isSaving || isDeleting;
@@ -82,9 +103,8 @@ export function TransactionSheet({
   // Reset form and confirmDelete state on open / transaction change
   useEffect(() => {
     if (!open) return;
-    setConfirmDelete(false);
-    form.reset(buildDefaults(transaction));
-  }, [open, transaction, form]);
+    reset(buildDefaults(transaction));
+  }, [open, transaction, reset]);
 
   function onSubmit(values: TransactionFormData) {
     startSaveTransition(async () => {
@@ -120,28 +140,37 @@ export function TransactionSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-md" side="right">
-        <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle>
+      {/* Mobile: 95vw wide. sm+: standard max-w-md */}
+      <SheetContent
+        className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
+        side="right"
+      >
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <SheetHeader className="border-b px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+          <SheetTitle className="text-base sm:text-lg">
             {isEditing ? "Edit expense" : "New expense"}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-xs sm:text-sm">
             {isEditing
               ? "Update the details of this expense."
               : "Record a new expense."}
           </SheetDescription>
         </SheetHeader>
 
+        {/* ── Scrollable body + fixed footer, wrapped in form ────────── */}
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-1 flex-col overflow-y-auto"
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col min-h-0 overflow-hidden"
         >
-          <div className="flex flex-col gap-5 px-6 py-5">
-            {/* ── Amount ──────────────────────────────────────────────── */}
+          {/* Scrollable fields */}
+          <div className="flex flex-col gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
+            {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-amount">Amount</FieldLabel>
+              <FieldLabel htmlFor="tx-amount" className="text-xs sm:text-sm">
+                Amount
+              </FieldLabel>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -151,44 +180,45 @@ export function TransactionSheet({
                   min="0"
                   placeholder="0.00"
                   disabled={isLoading}
-                  className="pl-7"
-                  {...form.register("amount", { valueAsNumber: true })}
+                  className="pl-7 text-xs sm:text-sm"
+                  {...register("amount", { valueAsNumber: true })}
                 />
               </div>
-              {form.formState.errors.amount && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.amount.message}
+              {errors.amount && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.amount.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Description ─────────────────────────────────────────── */}
+            {/* ── Description ──────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-desc">Description</FieldLabel>
+              <FieldLabel htmlFor="tx-desc" className="text-xs sm:text-sm">
+                Description
+              </FieldLabel>
               <Input
                 id="tx-desc"
                 placeholder="e.g. Lunch at restaurant"
                 disabled={isLoading}
-                {...form.register("description")}
+                className="text-xs sm:text-sm"
+                {...register("description")}
               />
-              {form.formState.errors.description && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.description.message}
+              {errors.description && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.description.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Category ────────────────────────────────────────────── */}
+            {/* ── Category ─────────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Category</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">Category</FieldLabel>
               <Select
-                value={form.watch("category_id") ?? ""}
-                onValueChange={(val) =>
-                  form.setValue("category_id", val || null)
-                }
+                value={watchCategory ?? ""}
+                onValueChange={(val) => setValue("category_id", val || null)}
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full text-xs sm:text-sm">
                   <SelectValue placeholder="Select a category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -210,36 +240,38 @@ export function TransactionSheet({
               </Select>
             </Field>
 
-            {/* ── Date ────────────────────────────────────────────────── */}
+            {/* ── Date ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Date</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">Date</FieldLabel>
               <DatePicker
-                value={form.watch("date")}
-                onChange={(v) => form.setValue("date", v, { shouldValidate: true })}
+                value={watchDate}
+                onChange={(v) => setValue("date", v, { shouldValidate: true })}
                 placeholder="Pick a date"
                 disabled={isLoading}
               />
-              {form.formState.errors.date && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.date.message}
+              {errors.date && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.date.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Payment method ───────────────────────────────────────── */}
+            {/* ── Payment method ────────────────────────────────────── */}
             <Field>
-              <FieldLabel>Payment method</FieldLabel>
+              <FieldLabel className="text-xs sm:text-sm">
+                Payment method
+              </FieldLabel>
               <Select
-                value={form.watch("payment_method")}
+                value={watchPaymentMethod}
                 onValueChange={(val) =>
-                  form.setValue(
+                  setValue(
                     "payment_method",
                     val as TransactionFormData["payment_method"],
                   )
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full text-xs sm:text-sm">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -250,16 +282,16 @@ export function TransactionSheet({
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.payment_method && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.payment_method.message}
+              {errors.payment_method && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.payment_method.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Note ────────────────────────────────────────────────── */}
+            {/* ── Note ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-note">
+              <FieldLabel htmlFor="tx-note" className="text-xs sm:text-sm">
                 Note{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -270,19 +302,19 @@ export function TransactionSheet({
                 placeholder="Any extra details..."
                 rows={3}
                 disabled={isLoading}
-                className="resize-none"
-                {...form.register("note")}
+                className="resize-none text-xs sm:text-sm"
+                {...register("note")}
               />
-              {form.formState.errors.note && (
-                <FieldDescription className="text-destructive">
-                  {form.formState.errors.note.message}
+              {errors.note && (
+                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  {errors.note.message}
                 </FieldDescription>
               )}
             </Field>
           </div>
 
-          {/* ── Footer ────────────────────────────────────────────────── */}
-          <SheetFooter className="mt-auto flex-col gap-2 border-t px-6 py-4">
+          {/* ── Footer — always visible ─────────────────────────────────── */}
+          <div className="flex flex-col gap-2 border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
             {/* Delete row — only in edit mode */}
             {isEditing && (
               <div className="flex w-full items-center gap-2">
@@ -292,20 +324,21 @@ export function TransactionSheet({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete expense
                   </Button>
                 ) : (
                   <>
-                    <span className="flex-1 text-sm text-muted-foreground">
+                    <span className="flex-1 text-xs text-muted-foreground">
                       Are you sure?
                     </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
+                      className="text-xs sm:text-sm"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -315,6 +348,7 @@ export function TransactionSheet({
                       type="button"
                       variant="destructive"
                       size="sm"
+                      className="text-xs sm:text-sm"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -333,20 +367,26 @@ export function TransactionSheet({
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1" disabled={isLoading}>
+              <Button
+                type="submit"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm"
+                disabled={isLoading}
+              >
                 <span className="flex items-center justify-center gap-1.5">
                   {isSaving ? <Spinner /> : ""}
                   {isEditing ? "Save changes" : "Add expense"}
                 </span>
               </Button>
             </div>
-          </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>
@@ -355,7 +395,9 @@ export function TransactionSheet({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildDefaults(transaction: TransactionWithCategory | null | undefined) {
+function buildDefaults(
+  transaction: TransactionWithCategory | null | undefined,
+) {
   if (transaction) {
     return {
       type: "expense" as const,

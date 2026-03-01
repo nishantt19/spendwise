@@ -19,10 +19,10 @@ export default async function IncomePage() {
   const receivedCount = sources.filter((s) => s.is_received).length;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Income</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Income</h1>
+        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
           {sources.length > 0
             ? `${receivedCount} of ${sources.length} source${sources.length !== 1 ? "s" : ""} received in ${MONTH_LABELS[month - 1]}`
             : "Track what you expect to receive each month."}
