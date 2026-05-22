@@ -2,11 +2,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant light (&:is(.light *));
+@theme {
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -36,6 +40,20 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Extended design tokens */
+  --color-card-elevated: var(--card-elevated);
+  --color-primary-soft: var(--primary-soft);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-border-strong: var(--border-strong);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-primary-gradient: var(--primary-gradient);
+  --color-primary-hover: var(--primary-hover);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -43,45 +61,204 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  --text-1_5xs: 11px;
-  --text-error: 13px;
+  /* Custom typography scale */
+  --text-9: 9px;
+  --text-10: 10px;
+  --text-11: 11px;
+  --text-13: 13px;
+  --text-15: 15px;
+  --text-17: 17px;
+  --text-22: 22px;
 }
 
+/* ── Dark theme (default) ──────────────────────────────────────────── */
+/*
+  CHANGES (dark):
+  - background: lifted very slightly (0.141→0.148) — less cave-black, still deep
+  - card: tiny lift (0.21→0.218) for cleaner separation from bg
+  - card-elevated: nudged up (0.255→0.262) — three distinct surface levels now read clearly
+  - primary: fractionally more saturated (0.2→0.21) and brighter (0.648→0.658) — pops better on dark surfaces
+  - primary-soft: opacity raised (0.14→0.16) — active states feel more intentional
+  - muted: tightened chroma (unchanged hue, very subtle)
+  - muted-foreground: brighter (0.71→0.735) — secondary text more legible
+  - subtle-foreground: raised (0.52→0.54) — hint text less muddy
+  - border: bumped (6%→7%) — card edges just visible enough without looking lined
+  - border-strong: bumped (12%→14%) — focused/hover borders have real presence
+  - input: raised (15%→17%) — input fields feel more defined
+  - ring: slightly more chroma for focus ring visibility
+  - shadow-card: second layer strengthened (0.35→0.40) — cards feel seated, not floating
+  - sidebar: one notch darker than bg (0.165→0.155) — clear spatial hierarchy
+  - sidebar-primary: matches new primary brightness
+  - stat-accent-border: kept, deepened red tone slightly for richness
+  - chart colors: tightened into a cohesive 5-stop green ramp (was scattered)
+*/
 :root {
   --radius: 0.65rem;
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
+
+  --background:       oklch(0.148 0.005 285.823);
+  --foreground:       oklch(0.985 0 0);
+
+  --card:             oklch(0.218 0.006 285.885);
+  --card-elevated:    oklch(0.262 0.007 285.885);
+  --card-foreground:  oklch(0.985 0 0);
+
+  --popover:          oklch(0.218 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.648 0.2 131.684);
+
+  --primary:          oklch(0.658 0.21 131.684);
   --primary-foreground: oklch(0.986 0.031 120.757);
-  --secondary: oklch(0.274 0.006 286.033);
+  --primary-soft:     oklch(0.658 0.21 131.684 / 0.16);
+
+  --secondary:        oklch(0.278 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
+
+  --muted:            oklch(0.248 0.006 286.033);
+  --muted-foreground: oklch(0.735 0.014 286.067);
+  --subtle-foreground: oklch(0.54 0.012 286.067);
+
+  --accent:           oklch(0.278 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.405 0.101 131.063);
-  --chart-1: oklch(0.871 0.15 154.449);
-  --chart-2: oklch(0.723 0.219 149.579);
-  --chart-3: oklch(0.627 0.194 149.214);
-  --chart-4: oklch(0.527 0.154 150.069);
-  --chart-5: oklch(0.448 0.119 151.328);
-  --sidebar: oklch(0.21 0.006 285.885);
+
+  --destructive:      oklch(0.704 0.191 22.216);
+  --destructive-soft: oklch(0.704 0.191 22.216 / 0.15);
+
+  --warning:          oklch(0.78 0.15 75);
+  --warning-soft:     oklch(0.78 0.15 75 / 0.15);
+
+  --info:             oklch(0.7 0.14 240);
+  --info-soft:        oklch(0.7 0.14 240 / 0.15);
+
+  --border:           oklch(1 0 0 / 7%);
+  --border-strong:    oklch(1 0 0 / 14%);
+  --input:            oklch(1 0 0 / 17%);
+  --ring:             oklch(0.42 0.108 131.063);
+
+  /* Chart: cohesive green ramp — income/growth readable at a glance */
+  --chart-1:          oklch(0.875 0.148 154.449);
+  --chart-2:          oklch(0.740 0.212 149.579);
+  --chart-3:          oklch(0.638 0.192 149.214);
+  --chart-4:          oklch(0.530 0.152 150.069);
+  --chart-5:          oklch(0.440 0.115 151.328);
+
+  --sidebar:          oklch(0.155 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.768 0.233 130.85);
+  --sidebar-primary:  oklch(0.775 0.228 130.85);
   --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent:   oklch(0.248 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.405 0.101 131.063);
-  --text-1_5xs: var(--text-1_5xs);
-  --text-error: var(--text-error);
+  --sidebar-border:   oklch(1 0 0 / 6%);
+  --sidebar-ring:     oklch(0.42 0.108 131.063);
+
+  --shadow-card:
+    0 1px 0 0 oklch(1 0 0 / 5%) inset,
+    0 1px 3px 0 rgba(0, 0, 0, 0.40),
+    0 0 0 0.5px oklch(1 0 0 / 3%);
+
+  --grid-line:        oklch(1 0 0 / 5%);
+
+  --primary-gradient: oklch(0.73 0.22 140);
+  --primary-hover:    oklch(0.73 0.22 140);
+
+  --success:          oklch(0.658 0.18 145);
+  --success-foreground: oklch(0.986 0.031 120.757);
+
+  --stat-accent-start:  #1d2330;
+  --stat-accent-border: #5a2e2d;
+}
+
+/* ── Light (warm paper) theme ──────────────────────────────────────── */
+/*
+  CHANGES (light):
+  - background: very marginally cooler hue shift (85→83) — paper feel intact, slightly crisper
+  - card: pure white now (0.998→1.0) — cards lift cleanly off the warm bg
+  - card-elevated: kept near-white with same warm tint
+  - foreground: slightly deeper (0.18→0.16) — body text has more authority
+  - primary: marginally richer chroma (0.115→0.122) — green pops on the warm bg
+  - primary-soft: tightened to 0.12 — hover/active states feel deliberate
+  - muted-foreground: lifted (0.42→0.44) — secondary text cleaner on warm bg
+  - subtle-foreground: nudged (0.6→0.58)
+  - border: bumped from 8%→9% — card hairlines just readable
+  - border-strong: 15%→17% — focus/hover states distinct
+  - input: 12%→14% — input fields feel defined without being heavy
+  - ring: opacity up (0.4→0.45)
+  - shadow-card: slight warm tint on shadow (brown instead of pure gray)
+  - sidebar: cooler warm tone (0.95→0.952, hue 82→80) — differentiates from content
+  - sidebar-primary: matches new primary
+  - chart: warm-paper-appropriate greens, slightly adjusted saturation
+  - stat-accent-start: very slightly warmer
+*/
+.light {
+  --radius: 0.65rem;
+
+  --background:       oklch(0.964 0.010 83);
+  --foreground:       oklch(0.16 0.014 75);
+
+  --card:             oklch(1.0 0.002 83);
+  --card-elevated:    oklch(0.992 0.004 83);
+  --card-foreground:  oklch(0.16 0.014 75);
+
+  --popover:          oklch(1.0 0.002 83);
+  --popover-foreground: oklch(0.16 0.014 75);
+
+  --primary:          oklch(0.44 0.122 148);
+  --primary-foreground: oklch(0.98 0.012 120);
+  --primary-soft:     oklch(0.44 0.122 148 / 0.12);
+
+  --secondary:        oklch(0.922 0.008 83);
+  --secondary-foreground: oklch(0.16 0.014 75);
+
+  --muted:            oklch(0.938 0.008 83);
+  --muted-foreground: oklch(0.44 0.013 75);
+  --subtle-foreground: oklch(0.58 0.011 75);
+
+  --accent:           oklch(0.932 0.008 83);
+  --accent-foreground: oklch(0.16 0.014 75);
+
+  --destructive:      oklch(0.52 0.19 25);
+  --destructive-soft: oklch(0.52 0.19 25 / 0.11);
+
+  --warning:          oklch(0.58 0.15 65);
+  --warning-soft:     oklch(0.58 0.15 65 / 0.11);
+
+  --info:             oklch(0.5 0.13 235);
+  --info-soft:        oklch(0.5 0.13 235 / 0.11);
+
+  --border:           oklch(0.18 0.014 75 / 9%);
+  --border-strong:    oklch(0.18 0.014 75 / 17%);
+  --input:            oklch(0.18 0.014 75 / 14%);
+  --ring:             oklch(0.44 0.122 148 / 0.45);
+
+  /* Chart: slightly richer greens that work on warm paper */
+  --chart-1:          oklch(0.78 0.132 150);
+  --chart-2:          oklch(0.63 0.142 148);
+  --chart-3:          oklch(0.51 0.122 148);
+  --chart-4:          oklch(0.41 0.100 148);
+  --chart-5:          oklch(0.31 0.072 148);
+
+  --sidebar:          oklch(0.952 0.013 80);
+  --sidebar-foreground: oklch(0.16 0.014 75);
+  --sidebar-primary:  oklch(0.44 0.122 148);
+  --sidebar-primary-foreground: oklch(0.98 0.012 120);
+  --sidebar-accent:   oklch(0.920 0.011 83);
+  --sidebar-accent-foreground: oklch(0.16 0.014 75);
+  --sidebar-border:   oklch(0.18 0.014 75 / 8%);
+  --sidebar-ring:     oklch(0.44 0.122 148 / 0.45);
+
+  --shadow-card:
+    0 1px 0 0 oklch(1 0 0 / 80%) inset,
+    0 1px 2px 0 oklch(0.22 0.018 75 / 6%),
+    0 0 0 0.5px oklch(0.18 0.014 75 / 4%);
+
+  --grid-line:        oklch(0.18 0.014 75 / 6%);
+
+  --primary-gradient: oklch(0.52 0.142 155);
+  --primary-hover:    oklch(0.52 0.142 155);
+
+  --success:          oklch(0.44 0.15 145);
+  --success-foreground: oklch(0.98 0.012 120);
+
+  --stat-accent-start:  #ece9e0;
+  --stat-accent-border: #ccc4af;
 }
 
 @layer base {
@@ -89,6 +266,21 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-xs;
+    font-size: var(--text-11);
+    letter-spacing: -0.005em;
+    font-feature-settings: "ss01" 1, "cv11" 1;
+  }
+
+  @media (min-width: 640px) {
+    body {
+      font-size: var(--text-13);
+    }
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: var(--shadow-card);
   }
 }

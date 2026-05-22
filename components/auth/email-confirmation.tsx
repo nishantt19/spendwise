@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TypographyH1 } from "@/components/ui/typography";
 import {
   FieldGroup,
   Field,
@@ -99,7 +100,7 @@ export function EmailConfirmation({
               <div className="flex items-center justify-center size-14 rounded-full bg-primary/10 ring-8 ring-primary/5">
                 <CheckCircle className="size-6 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold">Email Verified!</h1>
+              <TypographyH1>Email Verified!</TypographyH1>
               <p className="text-muted-foreground text-sm text-balance">
                 {result.message}
               </p>
@@ -119,7 +120,7 @@ export function EmailConfirmation({
               <div className="flex items-center justify-center size-14 rounded-full bg-destructive/10 ring-8 ring-destructive/5">
                 <XCircle className="size-6 text-destructive" />
               </div>
-              <h1 className="text-2xl font-bold">Verification Failed</h1>
+              <TypographyH1>Verification Failed</TypographyH1>
               <p className="text-destructive text-sm text-balance">
                 {result.message}
               </p>

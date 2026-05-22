@@ -8,6 +8,7 @@ import { LogIn01 } from "@untitledui/icons";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TypographyH2 } from "@/components/ui/typography";
 import {
   Field,
   FieldDescription,
@@ -61,8 +62,8 @@ export function LoginForm({
             <LogIn01 className="size-6 text-primary" />
           </div>
           <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-2xl font-bold">Login to your account</h1>
-            <p className="text-muted-foreground text-sm text-balance">
+            <TypographyH2>Login to your account</TypographyH2>
+            <p className="text-muted-foreground text-13 sm:text-sm text-balance">
               Enter your email below to login to your account
             </p>
           </div>
@@ -86,7 +87,7 @@ export function LoginForm({
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <a
               href="/auth/forgot-password"
-              className="ml-auto text-sm underline-offset-4 hover:underline hover:text-primary"
+              className="ml-auto text-xs sm:text-13 underline-offset-4 hover:underline hover:text-primary"
             >
               Forgot your password?
             </a>

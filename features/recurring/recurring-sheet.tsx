@@ -156,7 +156,7 @@ export function RecurringSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* Mobile: 95vw wide. sm+: standard max-w-md */}
       <SheetContent
-        className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
+        className="flex flex-col gap-0 p-0 w-full sm:max-w-md"
         side="right"
       >
         {/* ── Header ─────────────────────────────────────────────────── */}
@@ -164,7 +164,7 @@ export function RecurringSheet({
           <SheetTitle className="text-base sm:text-lg">
             {isEditing ? "Edit recurring expense" : "New recurring expense"}
           </SheetTitle>
-          <SheetDescription className="text-xs sm:text-sm">
+          <SheetDescription className="text-xs sm:text-13">
             {isEditing
               ? "Update the details of this recurring expense."
               : "Set up an expense that repeats on a schedule."}
@@ -180,18 +180,18 @@ export function RecurringSheet({
           <div className="flex flex-col gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
             {/* ── Name ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="re-name" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="re-name" className="text-xs sm:text-13">
                 Name
               </FieldLabel>
               <Input
                 id="re-name"
                 placeholder="e.g. Gym Membership, Netflix"
                 disabled={isLoading}
-                className="text-xs sm:text-sm"
+                className="text-xs sm:text-13"
                 {...register("name")}
               />
               {errors.name && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.name.message}
                 </FieldDescription>
               )}
@@ -199,11 +199,11 @@ export function RecurringSheet({
 
             {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="re-amount" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="re-amount" className="text-xs sm:text-13">
                 Amount
               </FieldLabel>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-muted-foreground">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-13 text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -213,12 +213,12 @@ export function RecurringSheet({
                   min="0"
                   placeholder="0.00"
                   disabled={isLoading}
-                  className="pl-7 text-xs sm:text-sm"
+                  className="pl-7!"
                   {...register("amount", { valueAsNumber: true })}
                 />
               </div>
               {errors.amount && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.amount.message}
                 </FieldDescription>
               )}
@@ -226,7 +226,7 @@ export function RecurringSheet({
 
             {/* ── Frequency ────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Frequency</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Frequency</FieldLabel>
               <Select
                 value={watchFrequency}
                 onValueChange={(val) =>
@@ -234,7 +234,7 @@ export function RecurringSheet({
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full text-xs sm:text-sm">
+                <SelectTrigger className="w-full text-xs sm:text-13">
                   <SelectValue placeholder="How often does this repeat?" />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +246,7 @@ export function RecurringSheet({
                 </SelectContent>
               </Select>
               {errors.frequency && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.frequency.message}
                 </FieldDescription>
               )}
@@ -254,7 +254,7 @@ export function RecurringSheet({
 
             {/* ── Category ─────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">
+              <FieldLabel className="text-xs sm:text-13">
                 Category{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -265,7 +265,7 @@ export function RecurringSheet({
                 onValueChange={(val) => setValue("category_id", val || null)}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full text-xs sm:text-sm">
+                <SelectTrigger className="w-full text-xs sm:text-13">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -289,7 +289,7 @@ export function RecurringSheet({
 
             {/* ── Payment method ────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">
+              <FieldLabel className="text-xs sm:text-13">
                 Payment method
               </FieldLabel>
               <Select
@@ -302,7 +302,7 @@ export function RecurringSheet({
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full text-xs sm:text-sm">
+                <SelectTrigger className="w-full text-xs sm:text-13">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -314,7 +314,7 @@ export function RecurringSheet({
                 </SelectContent>
               </Select>
               {errors.payment_method && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.payment_method.message}
                 </FieldDescription>
               )}
@@ -323,7 +323,7 @@ export function RecurringSheet({
             {/* ── Start & End date ─────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <Field>
-                <FieldLabel className="text-xs sm:text-sm">
+                <FieldLabel className="text-xs sm:text-13">
                   Start date
                 </FieldLabel>
                 <DatePicker
@@ -335,14 +335,14 @@ export function RecurringSheet({
                   disabled={isLoading}
                 />
                 {errors.start_date && (
-                  <FieldDescription className="text-destructive text-xs sm:text-sm">
+                  <FieldDescription className="text-destructive text-xs sm:text-13">
                     {errors.start_date.message}
                   </FieldDescription>
                 )}
               </Field>
 
               <Field>
-                <FieldLabel className="text-xs sm:text-sm">
+                <FieldLabel className="text-xs sm:text-13">
                   End date{" "}
                   <span className="font-normal text-muted-foreground">
                     (optional)
@@ -359,13 +359,13 @@ export function RecurringSheet({
 
             {/* ── Status ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Status</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Status</FieldLabel>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   size="sm"
                   variant={watchedIsActive ? "default" : "outline"}
-                  className="w-full text-xs sm:text-sm"
+                  className="w-full text-xs sm:text-13"
                   disabled={isLoading}
                   onClick={() => setValue("is_active", true)}
                 >
@@ -375,21 +375,21 @@ export function RecurringSheet({
                   type="button"
                   size="sm"
                   variant={!watchedIsActive ? "default" : "outline"}
-                  className="w-full text-xs sm:text-sm"
+                  className="w-full text-xs sm:text-13"
                   disabled={isLoading}
                   onClick={() => setValue("is_active", false)}
                 >
                   Paused
                 </Button>
               </div>
-              <FieldDescription className="text-xs sm:text-sm">
+              <FieldDescription className="text-xs sm:text-13">
                 {`Paused expenses won't generate new transactions.`}
               </FieldDescription>
             </Field>
 
             {/* ── Description ──────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="re-desc" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="re-desc" className="text-xs sm:text-13">
                 Description{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -400,11 +400,11 @@ export function RecurringSheet({
                 placeholder="Any extra details..."
                 rows={3}
                 disabled={isLoading}
-                className="resize-none text-xs sm:text-sm"
+                className="resize-none text-xs sm:text-13"
                 {...register("description")}
               />
               {errors.description && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.description.message}
                 </FieldDescription>
               )}
@@ -422,7 +422,7 @@ export function RecurringSheet({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full text-xs sm:text-sm"
+                    className="w-full text-xs sm:text-13"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete recurring expense
@@ -436,7 +436,7 @@ export function RecurringSheet({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -446,7 +446,7 @@ export function RecurringSheet({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -466,7 +466,7 @@ export function RecurringSheet({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
@@ -475,7 +475,7 @@ export function RecurringSheet({
               <Button
                 type="submit"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
               >
                 <span className="flex items-center justify-center gap-1.5">

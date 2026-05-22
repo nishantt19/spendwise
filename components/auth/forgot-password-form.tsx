@@ -8,6 +8,7 @@ import { Key01 } from "@untitledui/icons";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TypographyH1 } from "@/components/ui/typography";
 import {
   Field,
   FieldDescription,
@@ -62,7 +63,7 @@ export function ForgotPasswordForm({
             <Key01 className="size-6 text-primary" />
           </div>
           <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-2xl font-bold">Forgot your Password?</h1>
+            <TypographyH1>Forgot your Password?</TypographyH1>
             <p className="text-muted-foreground text-sm text-balance">
               Enter your email below to receive a password reset link
             </p>

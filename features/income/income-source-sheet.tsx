@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useTransition, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -66,6 +66,7 @@ export function IncomeSourceSheet({
   const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+
   const {
     register,
     reset,
@@ -78,27 +79,14 @@ export function IncomeSourceSheet({
     defaultValues: buildDefaults(null, defaultMonth, defaultYear),
   });
 
-  const watchIsReceived = useWatch({
-    control,
-    name: "is_received",
-  });
-
-  const watchMonth = useWatch({
-    control,
-    name: "month",
-  });
-
-  const watchYear = useWatch({
-    control,
-    name: "year",
-  });
-
-  const watchSourceType = useWatch({
-    control,
-    name: "source_type",
-  });
+  const watchIsReceived = useWatch({ control, name: "is_received" });
+  const watchMonth = useWatch({ control, name: "month" });
+  const watchYear = useWatch({ control, name: "year" });
+  const watchSourceType = useWatch({ control, name: "source_type" });
 
   const isLoading = isSaving || isDeleting;
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
 
   useEffect(() => {
     if (!open) return;
@@ -137,14 +125,11 @@ export function IncomeSourceSheet({
     });
   }
 
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* Mobile: 95vw wide. sm+: standard max-w-md */}
       <SheetContent
-        className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
+        className="flex flex-col gap-0 p-0 w-full sm:max-w-md"
         side="right"
       >
         {/* ── Header ─────────────────────────────────────────────────── */}
@@ -152,7 +137,7 @@ export function IncomeSourceSheet({
           <SheetTitle className="text-base sm:text-lg">
             {isEditing ? "Edit income source" : "New income source"}
           </SheetTitle>
-          <SheetDescription className="text-xs sm:text-sm">
+          <SheetDescription className="text-xs sm:text-13">
             {isEditing
               ? "Update the details of this income source."
               : "Add an expected income entry for the selected month."}
@@ -168,18 +153,18 @@ export function IncomeSourceSheet({
           <div className="flex flex-col gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
             {/* ── Name ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="is-name" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="is-name" className="text-xs sm:text-13">
                 Name
               </FieldLabel>
               <Input
                 id="is-name"
                 placeholder="e.g. Main Salary, Freelance Project"
                 disabled={isLoading}
-                className="text-xs sm:text-sm"
+                className="text-xs sm:text-13"
                 {...register("name")}
               />
               {errors.name && (
-                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                <FieldDescription className="text-destructive text-11 sm:text-13">
                   {errors.name.message}
                 </FieldDescription>
               )}
@@ -187,7 +172,7 @@ export function IncomeSourceSheet({
 
             {/* ── Source type ──────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Type</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Type</FieldLabel>
               <Select
                 value={watchSourceType}
                 onValueChange={(val) =>
@@ -198,7 +183,7 @@ export function IncomeSourceSheet({
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full text-xs sm:text-sm">
+                <SelectTrigger className="w-full text-xs sm:text-13">
                   <SelectValue placeholder="Select income type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -210,7 +195,7 @@ export function IncomeSourceSheet({
                 </SelectContent>
               </Select>
               {errors.source_type && (
-                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                <FieldDescription className="text-destructive text-11 sm:text-13">
                   {errors.source_type.message}
                 </FieldDescription>
               )}
@@ -218,11 +203,11 @@ export function IncomeSourceSheet({
 
             {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="is-amount" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="is-amount" className="text-xs sm:text-13">
                 Expected amount
               </FieldLabel>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-muted-foreground">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-13 text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -232,12 +217,12 @@ export function IncomeSourceSheet({
                   min="0"
                   placeholder="0.00"
                   disabled={isLoading}
-                  className="pl-7 text-xs sm:text-sm"
+                  className="pl-7!"
                   {...register("amount", { valueAsNumber: true })}
                 />
               </div>
               {errors.amount && (
-                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                <FieldDescription className="text-destructive text-11 sm:text-13">
                   {errors.amount.message}
                 </FieldDescription>
               )}
@@ -246,13 +231,13 @@ export function IncomeSourceSheet({
             {/* ── Month & Year ─────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <Field>
-                <FieldLabel className="text-xs sm:text-sm">Month</FieldLabel>
+                <FieldLabel className="text-xs sm:text-13">Month</FieldLabel>
                 <Select
                   value={String(watchMonth)}
                   onValueChange={(val) => setValue("month", Number(val))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="w-full text-xs sm:text-sm">
+                  <SelectTrigger className="w-full text-xs sm:text-13">
                     <SelectValue placeholder="Month" />
                   </SelectTrigger>
                   <SelectContent>
@@ -266,13 +251,13 @@ export function IncomeSourceSheet({
               </Field>
 
               <Field>
-                <FieldLabel className="text-xs sm:text-sm">Year</FieldLabel>
+                <FieldLabel className="text-xs sm:text-13">Year</FieldLabel>
                 <Select
                   value={String(watchYear)}
                   onValueChange={(val) => setValue("year", Number(val))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="w-full text-xs sm:text-sm">
+                  <SelectTrigger className="w-full text-xs sm:text-13">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -288,13 +273,13 @@ export function IncomeSourceSheet({
 
             {/* ── Status ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Status</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Status</FieldLabel>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   size="sm"
                   variant={!watchIsReceived ? "default" : "outline"}
-                  className="w-full text-xs sm:text-sm"
+                  className="w-full text-xs sm:text-13"
                   disabled={isLoading}
                   onClick={() => setValue("is_received", false)}
                 >
@@ -304,7 +289,7 @@ export function IncomeSourceSheet({
                   type="button"
                   size="sm"
                   variant={watchIsReceived ? "default" : "outline"}
-                  className="w-full text-xs sm:text-sm"
+                  className="w-full text-xs sm:text-13"
                   disabled={isLoading}
                   onClick={() => setValue("is_received", true)}
                 >
@@ -315,7 +300,7 @@ export function IncomeSourceSheet({
 
             {/* ── Note ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="is-note" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="is-note" className="text-xs sm:text-13">
                 Note{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -326,11 +311,11 @@ export function IncomeSourceSheet({
                 placeholder="e.g. Paid on the 1st of each month"
                 rows={3}
                 disabled={isLoading}
-                className="resize-none text-xs sm:text-sm"
+                className="resize-none text-xs sm:text-13"
                 {...register("note")}
               />
               {errors.note && (
-                <FieldDescription className="text-destructive text-1.5xs sm:text-error">
+                <FieldDescription className="text-destructive text-11 sm:text-13">
                   {errors.note.message}
                 </FieldDescription>
               )}
@@ -348,7 +333,7 @@ export function IncomeSourceSheet({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full text-xs sm:text-sm"
+                    className="w-full text-xs sm:text-13"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete source
@@ -362,7 +347,7 @@ export function IncomeSourceSheet({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -372,7 +357,7 @@ export function IncomeSourceSheet({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -392,7 +377,7 @@ export function IncomeSourceSheet({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
@@ -401,7 +386,7 @@ export function IncomeSourceSheet({
               <Button
                 type="submit"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
               >
                 <span className="flex items-center justify-center gap-1.5">

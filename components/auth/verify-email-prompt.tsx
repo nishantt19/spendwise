@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TypographyH1 } from "@/components/ui/typography";
 import { FieldGroup, FieldDescription } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { resendVerificationEmail } from "@/actions/auth";
@@ -53,7 +54,7 @@ export function VerifyEmailPrompt({
             <div className="flex items-center justify-center size-14 rounded-full bg-primary/10 ring-8 ring-primary/5">
               <Mail01 className="size-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold">Verify Your Email</h1>
+            <TypographyH1>Verify Your Email</TypographyH1>
             <p className="text-muted-foreground text-sm text-balance">
               {`We've sent a verification email to`}
             </p>

@@ -56,6 +56,16 @@ export async function createRecurringExpense(
 
   const { description, category_id, end_date, ...rest } = parsed.data;
 
+  if (category_id) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", category_id)
+      .eq("user_id", user.id)
+      .single();
+    if (!cat) return { status: "error", message: "Invalid category." };
+  }
+
   const { data, error } = await supabase
     .from("recurring_expenses")
     .insert({
@@ -100,6 +110,16 @@ export async function updateRecurringExpense(
   }
 
   const { description, category_id, end_date, ...rest } = parsed.data;
+
+  if (category_id) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", category_id)
+      .eq("user_id", user.id)
+      .single();
+    if (!cat) return { status: "error", message: "Invalid category." };
+  }
 
   const { data, error } = await supabase
     .from("recurring_expenses")

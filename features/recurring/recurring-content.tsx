@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useOptimistic, useState, useTransition } from "react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Plus, RefreshCw04, Trash01, FilePlus02 } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { TypographyH2 } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +23,7 @@ import {
   type DueDateStatus,
 } from "@/lib/format";
 import { CategoryIcon } from "@/lib/category-icons";
+import { getCategoryColor, getCategoryBg } from "@/lib/category-color";
 import {
   RECURRING_FREQUENCY_LABELS,
   RECURRING_MONTHLY_MULTIPLIERS,
@@ -53,36 +57,25 @@ export function RecurringContent({
   const [selectedExpense, setSelectedExpense] =
     useState<RecurringWithCategory | null>(null);
   const [, startTransition] = useTransition();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Optimistic toggle: flip is_active immediately, revert on error
-  function handleToggleActive(expense: RecurringWithCategory) {
-    const next = !expense.is_active;
+  function handleToggleActive(id: string, newValue: boolean) {
     setExpenses((prev) =>
-      prev.map((e) => (e.id === expense.id ? { ...e, is_active: next } : e)),
+      prev.map((e) => (e.id === id ? { ...e, is_active: newValue } : e)),
     );
-    startTransition(async () => {
-      const result = await toggleRecurringActive(expense.id, next);
-      if (result.status === "error") {
-        toast.error(result.message);
-        setExpenses((prev) =>
-          prev.map((e) =>
-            e.id === expense.id ? { ...e, is_active: !next } : e,
-          ),
-        );
-      }
-    });
   }
 
-  function handleDelete(expense: RecurringWithCategory) {
-    startTransition(async () => {
-      const result = await deleteRecurringExpense(expense.id);
-      if (result.status === "error") {
-        toast.error(result.message);
-        return;
-      }
-      toast.success(result.message);
-      setExpenses((prev) => prev.filter((e) => e.id !== expense.id));
-    });
+  async function handleDelete(expense: RecurringWithCategory) {
+    setDeletingId(expense.id);
+    const result = await deleteRecurringExpense(expense.id);
+    if (result.status === "error") {
+      toast.error(result.message);
+      setDeletingId(null);
+      return;
+    }
+    toast.success(result.message);
+    setExpenses((prev) => prev.filter((e) => e.id !== expense.id));
+    setDeletingId(null);
   }
 
   function handleAddToExpense(expense: RecurringWithCategory) {
@@ -124,12 +117,97 @@ export function RecurringContent({
     (sum, e) => sum + e.amount * RECURRING_MONTHLY_MULTIPLIERS[e.frequency],
     0,
   );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const overdueCount = activeExpenses.filter(
+    (e) => new Date(e.next_due_date + "T00:00:00") < today,
+  ).length;
+
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "paused">(
+    "all",
+  );
+  const filteredExpenses =
+    activeTab === "active"
+      ? expenses.filter((e) => e.is_active)
+      : activeTab === "paused"
+        ? expenses.filter((e) => !e.is_active)
+        : expenses;
+
+  const tabs: {
+    key: "all" | "active" | "paused";
+    label: string;
+    count: number;
+  }[] = [
+    { key: "all", label: "All", count: expenses.length },
+    { key: "active", label: "Active", count: activeExpenses.length },
+    { key: "paused", label: "Paused", count: pausedCount },
+  ];
 
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-4 sm:gap-5">
-        {/* ── Add button ────────────────────────────────────────────── */}
-        <div className="flex justify-end">
+        {/* ── Header ────────────────────────────────────────────── */}
+        <div>
+          <TypographyH2>Recurring</TypographyH2>
+          <p className="mt-0.5 text-xs sm:text-13 text-muted-foreground">
+            {expenses.length === 0 ? (
+              "No recurring expenses yet"
+            ) : (
+              <>
+                <span className="sm:hidden">
+                  {activeExpenses.length} active ·{" "}
+                  {formatCurrency(monthlyTotal)}/mo
+                </span>
+                <span className="hidden sm:inline">
+                  {activeExpenses.length} active subscription
+                  {activeExpenses.length !== 1 ? "s" : ""} · {pausedCount}{" "}
+                  paused
+                  {overdueCount > 0 && ` · ${overdueCount} overdue`}{" "}
+                  <span
+                    className="inline-flex items-center rounded-full px-1.5 py-0.5 text-10 font-medium align-middle"
+                    style={{
+                      background: "var(--warning-soft)",
+                      color: "var(--warning)",
+                    }}
+                  >
+                    {formatCurrency(monthlyTotal)}/mo
+                  </span>
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* ── Filter bar: tabs + add button ─────────────────────── */}
+        <div className="flex items-center justify-end gap-2">
+          {expenses.length > 0 && (
+            <div className="hidden sm:flex items-center gap-0.5 rounded-lg p-0.5 h-9 bg-muted">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 h-full text-xs font-medium transition-all",
+                    activeTab === tab.key
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-10 tabular-nums font-medium",
+                      activeTab === tab.key
+                        ? "bg-primary-soft text-primary"
+                        : "bg-card/60 text-muted-foreground",
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           <Button size="sm" className="gap-1.5" onClick={openCreateSheet}>
             <Plus size={15} />
             <span className="hidden sm:inline">Add recurring</span>
@@ -137,83 +215,101 @@ export function RecurringContent({
           </Button>
         </div>
 
-        {/* ── Summary cards ─────────────────────────────────────────── */}
+        {/* ── Timeline ───────────────────────────────────────────── */}
+        {activeExpenses.length > 0 && (
+          <RecurringTimeline expenses={activeExpenses} />
+        )}
+
+        {/* ── Mobile subscriptions heading + pill tabs ────────────── */}
         {expenses.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <SummaryCard
-              label="Est. monthly"
-              value={formatCurrency(monthlyTotal)}
-              variant="default"
-            />
-            <SummaryCard
-              label="Active"
-              value={String(activeExpenses.length)}
-              variant="success"
-            />
-            <SummaryCard
-              label="Paused"
-              value={String(pausedCount)}
-              variant={pausedCount > 0 ? "pending" : "default"}
-            />
+          <div className="sm:hidden flex flex-col gap-2">
+            <p className="text-xs font-semibold tracking-tight px-0.5">
+              Subscriptions
+            </p>
+            <div className="flex items-center gap-1.5">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all",
+                    activeTab === tab.key
+                      ? "bg-primary-soft text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {tab.label}
+                  <span className="tabular-nums text-10">{tab.count}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {/* ── List / table ───────────────────────────────────────────── */}
         {expenses.length === 0 ? (
           <EmptyState onAddClick={openCreateSheet} />
+        ) : filteredExpenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border bg-card">
+            <p className="text-xs sm:text-13 font-medium">
+              No {activeTab} subscriptions
+            </p>
+          </div>
         ) : (
           <>
             {/* Mobile: card list (hidden on sm+) */}
-            <div className="sm:hidden overflow-hidden rounded-xl border divide-y">
-              {expenses.map((expense) => (
+            <div className="sm:hidden flex flex-col gap-1.5">
+              {filteredExpenses.map((expense) => (
                 <RecurringCard
                   key={expense.id}
                   expense={expense}
                   onCardClick={openEditSheet}
-                  onToggleActive={handleToggleActive}
-                  onDelete={handleDelete}
                   onAddToExpense={handleAddToExpense}
                 />
               ))}
             </div>
 
             {/* Tablet/Desktop: table (hidden on mobile) */}
-            <div className="hidden sm:block overflow-hidden rounded-xl border">
-              <table className="w-full text-sm">
+            <div className="hidden sm:block overflow-hidden rounded-xl border bg-card">
+              {/* Table card header */}
+              <div className="px-4 sm:px-5 py-3 flex items-center justify-between border-b bg-card">
+                <div>
+                  <p className="text-13 font-semibold">Subscriptions</p>
+                  <p className="mt-0.5 text-11 sm:text-xs text-muted-foreground">
+                    {activeExpenses.length} active
+                    {pausedCount > 0 ? ` · ${pausedCount} paused` : ""}
+                  </p>
+                </div>
+              </div>
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b bg-muted/60 text-1.5xs sm:text-xs text-muted-foreground uppercase tracking-wide">
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Name
-                    </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-right font-medium">
-                      Amount
-                    </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Frequency
-                    </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Status
-                    </th>
-                    <th className="hidden md:table-cell px-4 py-2.5 text-left font-medium">
+                  <tr className="border-b bg-muted light:bg-muted/50 text-10 font-medium uppercase tracking-[0.08em] text-subtle-foreground">
+                    <th className="px-4 py-2.5 text-left">Subscription</th>
+                    <th className="hidden md:table-cell px-4 py-2.5 text-left">
                       Category
                     </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Next due
+                    <th className="px-4 py-2.5 text-left">Billing</th>
+                    <th
+                      className="px-4 py-2.5 text-left"
+                      style={{ color: "var(--subtle-foreground)" }}
+                    >
+                      Status
                     </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-right font-medium">
-                      Actions
-                    </th>
+                    <th className="px-4 py-2.5 text-left">Next due</th>
+                    <th className="px-4 py-2.5 text-right text-10">Amount</th>
+                    <th className="w-20 px-4 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((expense) => (
+                  {filteredExpenses.map((expense) => (
                     <RecurringRow
                       key={expense.id}
                       expense={expense}
                       onRowClick={openEditSheet}
-                      onToggleActive={handleToggleActive}
+                      onToggleSuccess={handleToggleActive}
                       onDelete={handleDelete}
                       onAddToExpense={handleAddToExpense}
+                      isDeleting={deletingId === expense.id}
                     />
                   ))}
                 </tbody>
@@ -237,30 +333,183 @@ export function RecurringContent({
 
 // ─── Summary card ─────────────────────────────────────────────────────────────
 
-function SummaryCard({
-  label,
-  value,
-  variant,
+function merchantColor(name: string): string {
+  const palettes = [
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--info)",
+    "var(--warning)",
+  ];
+  let h = 0;
+  for (let i = 0; i < name.length; i++)
+    h = (h * 31 + name.charCodeAt(i)) & 0xfffff;
+  return palettes[h % palettes.length];
+}
+
+function RecurringTimeline({
+  expenses,
 }: {
-  label: string;
-  value: string;
-  variant: "default" | "success" | "pending";
+  expenses: RecurringWithCategory[];
 }) {
-  const valueClass =
-    variant === "success"
-      ? "text-emerald-600"
-      : variant === "pending"
-        ? "text-amber-600"
-        : "text-foreground";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const HALF = 30;
+  const SPAN = 60;
+
+  const events = expenses
+    .map((e) => {
+      const due = new Date(e.next_due_date + "T00:00:00");
+      const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+      return { ...e, diff };
+    })
+    .filter((e) => e.diff >= -HALF && e.diff <= HALF);
 
   return (
-    <div className="flex flex-col gap-0.5 sm:gap-1 rounded-xl border bg-card p-3 sm:p-4">
-      <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
-      <p
-        className={`text-base sm:text-lg font-semibold tabular-nums truncate ${valueClass}`}
-      >
-        {value}
-      </p>
+    <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-card">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-xs sm:text-13 font-semibold">
+            <span className="sm:hidden">60-day timeline</span>
+            <span className="hidden sm:inline">60-day renewal timeline</span>
+          </p>
+          <p className="text-11 text-muted-foreground">
+            <span className="sm:hidden">Past due left of today</span>
+            <span className="hidden sm:inline">
+              Past due to the left of today · upcoming to the right
+            </span>
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-3 text-11 text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span
+              className="size-2 rounded-sm inline-block"
+              style={{ background: "var(--destructive)" }}
+            />
+            Overdue
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="size-2 rounded-sm inline-block"
+              style={{ background: "var(--primary)" }}
+            />
+            Upcoming
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="size-2 rounded-sm inline-block"
+              style={{ background: "var(--foreground)" }}
+            />
+            Today
+          </span>
+        </div>
+      </div>
+
+      {/* Timeline chips above axis */}
+      <div className="relative" style={{ height: 56 }}>
+        {/* Axis line */}
+        <div
+          className="absolute left-0 right-0 rounded-full"
+          style={{ top: 40, height: 2, background: "var(--border)" }}
+        />
+        {/* Week ticks + labels */}
+        {[
+          { p: 0, l: "−30d" },
+          { p: 0.25, l: "−15d" },
+          {
+            p: 0.5,
+            l: `Today · ${today.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
+          },
+          { p: 0.75, l: "+15d" },
+          { p: 1, l: "+30d" },
+        ].map((t) => (
+          <div
+            key={t.p}
+            style={{
+              position: "absolute",
+              left: `${t.p * 100}%`,
+              top: 34,
+              transform: "translateX(-50%)",
+            }}
+          >
+            <div
+              style={{
+                width: 1,
+                height: 8,
+                background: "var(--border)",
+                margin: "0 auto",
+              }}
+            />
+            <div
+              className="text-10 text-muted-foreground whitespace-nowrap text-center mt-1"
+              style={{ fontWeight: t.l === "Today" ? 600 : 400 }}
+            >
+              {t.l}
+            </div>
+          </div>
+        ))}
+        {/* Today marker */}
+        <div
+          className="absolute"
+          style={{
+            left: "50%",
+            top: 0,
+            bottom: 16,
+            width: 2,
+            background: "var(--foreground)",
+            transform: "translateX(-50%)",
+            opacity: 0.8,
+          }}
+        />
+        {/* Events */}
+        {events.map((e) => {
+          const pct = ((e.diff + HALF) / SPAN) * 100;
+          const overdue = e.diff < 0;
+          const color = merchantColor(e.name);
+          return (
+            <div
+              key={e.id}
+              title={`${e.name} · ${formatCurrency(e.amount)} · ${overdue ? `${Math.abs(e.diff)}d overdue` : `due in ${e.diff}d`}`}
+              style={{
+                position: "absolute",
+                left: `${pct}%`,
+                top: 4,
+                transform: "translateX(-50%)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <div
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 7,
+                  background: `color-mix(in oklch, ${color} 18%, var(--muted))`,
+                  color,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: overdue
+                    ? "1.5px solid var(--destructive)"
+                    : "1.5px solid var(--border)",
+                }}
+              >
+                {e.name.charAt(0).toUpperCase()}
+              </div>
+              <div
+                style={{
+                  width: 2,
+                  height: 8,
+                  background: overdue ? "var(--destructive)" : "var(--primary)",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -270,103 +519,80 @@ function SummaryCard({
 function RecurringCard({
   expense,
   onCardClick,
-  onToggleActive,
-  onDelete,
   onAddToExpense,
 }: {
   expense: RecurringWithCategory;
   onCardClick: (expense: RecurringWithCategory) => void;
-  onToggleActive: (expense: RecurringWithCategory) => void;
-  onDelete: (expense: RecurringWithCategory) => void;
   onAddToExpense: (expense: RecurringWithCategory) => void;
 }) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   const { label: dueLabel, status: dueStatus } = expense.is_active
     ? formatNextDueDate(expense.next_due_date)
-    : { label: "—", status: "upcoming" as DueDateStatus };
+    : { label: "Paused", status: "upcoming" as DueDateStatus };
 
   const isDue =
     expense.is_active && (dueStatus === "overdue" || dueStatus === "today");
   const cat = expense.category;
-  const color = cat?.color ?? "#6b7280";
+  const rawColor = cat?.color ?? "#6b7280";
+  const color = getCategoryColor(rawColor, isDark);
+  const iconBg = getCategoryBg(rawColor, isDark);
 
-  const dueClass: Record<DueDateStatus, string> = {
-    overdue: "text-red-500",
-    today: "text-amber-500",
-    soon: "text-amber-500",
-    upcoming: "text-muted-foreground",
+  const dueStyle: Record<DueDateStatus, React.CSSProperties> = {
+    overdue: { color: "var(--destructive)" },
+    today: { color: "var(--warning)" },
+    soon: { color: "var(--warning)" },
+    upcoming: { color: "var(--muted-foreground)" },
   };
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors"
+      className="flex items-center gap-3 px-3.5 py-3 bg-card border border-border rounded-xl cursor-pointer active:bg-muted/30 transition-colors"
       onClick={() => onCardClick(expense)}
     >
       {/* Icon */}
       <div
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg"
-        style={{
-          backgroundColor: `${color}1a`,
-          border: `1px solid ${color}30`,
-        }}
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg"
+        style={{ background: iconBg, color }}
       >
-        <CategoryIcon icon={cat?.icon} size={14} />
+        <CategoryIcon icon={cat?.icon} size={16} style={{ color }} />
       </div>
 
-      {/* Content */}
+      {/* Name + description */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium truncate">{expense.name}</span>
-          <span className="text-xs font-semibold tabular-nums shrink-0">
-            {formatCurrency(expense.amount)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-muted-foreground">
-            {RECURRING_FREQUENCY_LABELS[expense.frequency]}
-          </span>
-          <span className="text-[10px] text-muted-foreground">·</span>
+        <p className="text-xs font-medium truncate">{expense.name}</p>
+        <div className="flex items-center gap-1.5 mt-0.5 text-10 text-muted-foreground">
+          <span>{RECURRING_FREQUENCY_LABELS[expense.frequency]}</span>
+          <span>·</span>
           <span
-            className={`text-[10px] ${expense.is_active ? dueClass[dueStatus] : "text-muted-foreground/50"}`}
+            style={
+              expense.is_active
+                ? dueStyle[dueStatus]
+                : { color: "var(--muted-foreground)", opacity: 0.5 }
+            }
           >
-            {expense.is_active ? dueLabel : "Paused"}
+            {dueLabel}
           </span>
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Amount + add-to-expense */}
       <div
-        className="flex items-center gap-1 shrink-0"
+        className="flex items-center gap-2 shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Add to expense — only when due */}
         {isDue && (
           <button
             onClick={() => onAddToExpense(expense)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-md text-emerald-600 transition-colors hover:bg-emerald-600/10"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-emerald-500 transition-colors active:bg-emerald-500/10"
           >
             <FilePlus02 size={13} />
           </button>
         )}
-
-        {/* Toggle active */}
-        <button
-          onClick={() => onToggleActive(expense)}
-          className={`flex size-7 shrink-0 items-center justify-center rounded-md transition-colors text-[10px] font-semibold ${
-            expense.is_active
-              ? "bg-emerald-600/10 text-emerald-600"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {expense.is_active ? "On" : "Off"}
-        </button>
-
-        {/* Delete */}
-        <button
-          onClick={() => onDelete(expense)}
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-        >
-          <Trash01 size={13} />
-        </button>
+        <p className="text-sm font-semibold tabular-nums">
+          {formatCurrency(expense.amount)}
+        </p>
       </div>
     </div>
   );
@@ -377,118 +603,163 @@ function RecurringCard({
 function RecurringRow({
   expense,
   onRowClick,
-  onToggleActive,
+  onToggleSuccess,
   onDelete,
   onAddToExpense,
+  isDeleting,
 }: {
   expense: RecurringWithCategory;
   onRowClick: (expense: RecurringWithCategory) => void;
-  onToggleActive: (expense: RecurringWithCategory) => void;
+  onToggleSuccess: (id: string, newValue: boolean) => void;
   onDelete: (expense: RecurringWithCategory) => void;
   onAddToExpense: (expense: RecurringWithCategory) => void;
+  isDeleting: boolean;
 }) {
-  const { label: dueLabel, status: dueStatus } = expense.is_active
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const [optimisticActive, setOptimisticActive] = useOptimistic(
+    expense.is_active,
+  );
+  const [, startToggleTransition] = useTransition();
+
+  const { label: dueLabel, status: dueStatus } = optimisticActive
     ? formatNextDueDate(expense.next_due_date)
     : { label: "Paused", status: "upcoming" as DueDateStatus };
 
   const isDue =
-    expense.is_active && (dueStatus === "overdue" || dueStatus === "today");
+    optimisticActive && (dueStatus === "overdue" || dueStatus === "today");
 
-  const dueLabelClass: Record<DueDateStatus, string> = {
-    overdue: "text-red-500",
-    today: "text-amber-500",
-    soon: "text-amber-500",
-    upcoming: "text-muted-foreground",
+  function handleToggle() {
+    const next = !optimisticActive;
+    startToggleTransition(async () => {
+      setOptimisticActive(next);
+      const result = await toggleRecurringActive(expense.id, next);
+      if (result.status === "error") {
+        toast.error(result.message);
+      } else {
+        onToggleSuccess(expense.id, next);
+      }
+    });
+  }
+
+  const dueLabelStyle: Record<DueDateStatus, React.CSSProperties> = {
+    overdue: { color: "var(--destructive)" },
+    today: { color: "var(--warning)" },
+    soon: { color: "var(--warning)" },
+    upcoming: { color: "var(--muted-foreground)" },
   };
 
   const cat = expense.category;
-  const color = cat?.color ?? "#6b7280";
+  const rawColor = cat?.color ?? "#6b7280";
+  const color = getCategoryColor(rawColor, isDark);
+  const iconBg = getCategoryBg(rawColor, isDark);
 
   return (
     <tr
-      className="group cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/40"
+      className="group cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
       onClick={() => onRowClick(expense)}
     >
       {/* Name */}
-      <td className="px-3 sm:px-4 py-3">
-        <div className="flex items-center gap-2.5">
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-3">
           <div
-            className="flex size-7 shrink-0 items-center justify-center rounded-md"
-            style={{
-              backgroundColor: `${color}1a`,
-              border: `1px solid ${color}30`,
-            }}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: iconBg, color }}
           >
-            <CategoryIcon icon={cat?.icon} size={13} />
+            <CategoryIcon icon={cat?.icon} size={15} style={{ color }} />
           </div>
-          <span className="max-w-28 sm:max-w-40 truncate font-medium text-error sm:text-sm">
+          <p className="truncate text-13 font-medium max-w-36 sm:max-w-44 min-w-0">
             {expense.name}
-          </span>
+          </p>
         </div>
       </td>
 
-      {/* Amount — right-aligned */}
-      <td className="px-3 sm:px-4 py-3 text-right text-error sm:text-sm font-semibold tabular-nums">
-        {formatCurrency(expense.amount)}
+      {/* Category */}
+      <td className="hidden md:table-cell px-4 py-3.5">
+        {cat ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-11 font-medium"
+            style={{ background: iconBg, color }}
+          >
+            <span
+              className="size-1.5 rounded-full shrink-0"
+              style={{ background: color }}
+            />
+            {cat.name}
+          </span>
+        ) : (
+          <span className="text-11 text-muted-foreground/50">—</span>
+        )}
       </td>
 
-      {/* Frequency */}
-      <td className="px-3 sm:px-4 py-3 text-error sm:text-sm text-muted-foreground">
+      {/* Billing frequency */}
+      <td className="px-4 py-3.5 text-xs text-muted-foreground">
         {RECURRING_FREQUENCY_LABELS[expense.frequency]}
       </td>
 
       {/* Status */}
-      <td className="px-3 sm:px-4 py-3" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => onToggleActive(expense)}>
-          <Badge
-            variant={expense.is_active ? "default" : "secondary"}
-            className={`text-[10px] sm:text-1.5xs transition-colors ${
-              expense.is_active
-                ? "border-transparent bg-emerald-600 text-white hover:bg-emerald-700"
-                : "hover:bg-muted"
-            }`}
+      <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={handleToggle}
+          className="transition-opacity hover:opacity-80"
+        >
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-11 font-medium"
+            style={
+              optimisticActive
+                ? { background: "var(--primary-soft)", color: "var(--primary)" }
+                : {
+                    background: "var(--muted)",
+                    color: "var(--muted-foreground)",
+                  }
+            }
           >
-            {expense.is_active ? "Active" : "Paused"}
-          </Badge>
+            <span
+              className="size-1.5 rounded-full shrink-0"
+              style={{
+                background: optimisticActive
+                  ? "var(--primary)"
+                  : "var(--muted-foreground)",
+              }}
+            />
+            {optimisticActive ? "Active" : "Paused"}
+          </span>
         </button>
       </td>
 
-      {/* Category — hidden on sm, shown on md+ */}
-      <td className="hidden md:table-cell px-4 py-3 text-sm text-muted-foreground">
-        {cat ? (
-          <span className="rounded-md bg-muted px-2 py-0.5 text-1.5xs sm:text-xs text-muted-foreground font-medium">
-            {cat.name}
-          </span>
-        ) : (
-          <span className="text-muted-foreground/50">—</span>
-        )}
+      {/* Next due */}
+      <td
+        className="px-4 py-3.5 text-xs font-medium"
+        style={
+          optimisticActive
+            ? dueLabelStyle[dueStatus]
+            : { color: "var(--muted-foreground)", opacity: 0.4 }
+        }
+      >
+        {optimisticActive ? dueLabel : "—"}
       </td>
 
-      {/* Next due date */}
-      <td
-        className={`px-3 sm:px-4 py-3 text-error sm:text-sm ${expense.is_active ? dueLabelClass[dueStatus] : "text-muted-foreground/50"}`}
-      >
-        {expense.is_active ? dueLabel : "—"}
+      {/* Amount */}
+      <td className="px-4 py-3.5 text-right text-13 font-semibold tabular-nums">
+        {formatCurrency(expense.amount)}
       </td>
 
       {/* Actions */}
       <td
-        className="px-3 sm:px-4 py-3 text-right"
+        className="px-4 py-3.5 text-right"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-end gap-1">
-          {/* Add to expense */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => isDue && onAddToExpense(expense)}
                 disabled={!isDue}
-                className={`inline-flex size-7 items-center justify-center rounded-md transition-colors
-                  ${
-                    isDue
-                      ? "text-muted-foreground hover:bg-emerald-600/10 hover:text-emerald-600"
-                      : "cursor-not-allowed text-muted-foreground/30"
-                  }`}
+                className={`inline-flex size-7 items-center justify-center rounded-md transition-colors ${
+                  isDue
+                    ? "text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500"
+                    : "cursor-not-allowed text-muted-foreground/25"
+                }`}
               >
                 <FilePlus02 size={14} />
               </button>
@@ -500,14 +771,14 @@ function RecurringRow({
             </TooltipContent>
           </Tooltip>
 
-          {/* Delete — hover-only */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => onDelete(expense)}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
+                disabled={isDeleting}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-100 disabled:text-destructive"
               >
-                <Trash01 size={14} />
+                {isDeleting ? <Spinner className="size-3.5" /> : <Trash01 size={14} />}
               </button>
             </TooltipTrigger>
             <TooltipContent side="top">Delete</TooltipContent>
@@ -522,14 +793,14 @@ function RecurringRow({
 
 function EmptyState({ onAddClick }: { onAddClick: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center">
-      <div className="mb-3 flex size-12 sm:size-14 items-center justify-center rounded-full bg-muted">
-        <RefreshCw04 size={22} className="text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center rounded-xl border bg-card">
+      <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-muted">
+        <RefreshCw04 size={20} className="text-muted-foreground" />
       </div>
-      <p className="text-xs sm:text-sm font-medium">
+      <p className="text-xs sm:text-13 font-medium">
         No recurring expenses yet
       </p>
-      <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-xs">
+      <p className="mt-1 text-11 sm:text-xs text-muted-foreground max-w-xs">
         Set up expenses that repeat on a schedule — subscriptions, rent, EMIs.
       </p>
       <Button size="sm" className="mt-4 sm:mt-5 gap-1.5" onClick={onAddClick}>
@@ -545,20 +816,12 @@ function EmptyState({ onAddClick }: { onAddClick: () => void }) {
 export function RecurringContentSkeleton() {
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <div className="flex justify-end">
-        <Skeleton className="h-8 w-20 sm:w-28 rounded-md" />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="flex flex-col gap-1 rounded-xl border p-3 sm:p-4"
-          >
-            <Skeleton className="h-2.5 w-14 rounded" />
-            <Skeleton className="h-5 sm:h-6 w-20 sm:w-24 rounded" />
-          </div>
-        ))}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-36 rounded" />
+          <Skeleton className="h-3 w-48 rounded" />
+        </div>
+        <Skeleton className="h-8 w-20 sm:w-28 rounded-md shrink-0" />
       </div>
 
       {/* Mobile card skeleton */}
@@ -586,19 +849,18 @@ export function RecurringContentSkeleton() {
 
       {/* Desktop table skeleton */}
       <div className="hidden sm:block overflow-hidden rounded-xl border">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs sm:text-13">
           <thead>
             <tr className="border-b bg-muted/60">
               {[
-                "Name",
+                "Subscription",
                 "Amount",
-                "Frequency",
+                "Billing",
                 "Status",
-                "Category",
                 "Next due",
-                "Actions",
+                "",
               ].map((h) => (
-                <th key={h} className="px-4 py-2.5 text-left">
+                <th key={h} className="px-4 py-3 text-left">
                   <Skeleton className="h-2.5 w-12 rounded" />
                 </th>
               ))}
@@ -607,28 +869,31 @@ export function RecurringContentSkeleton() {
           <tbody className="divide-y">
             {[...Array(4)].map((_, i) => (
               <tr key={i}>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3.5">
                   <div className="flex items-center gap-2.5">
                     <Skeleton className="size-7 rounded-md" />
-                    <Skeleton className="h-3.5 w-32 rounded" />
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-3.5 w-32 rounded" />
+                      <Skeleton className="h-2.5 w-20 rounded" />
+                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3.5 text-right">
                   <Skeleton className="ml-auto h-3 w-16 rounded" />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3.5">
                   <Skeleton className="h-3 w-14 rounded" />
                 </td>
-                <td className="px-4 py-3">
-                  <Skeleton className="h-5 w-14 rounded-full" />
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-1.5">
+                    <Skeleton className="size-1.5 rounded-full" />
+                    <Skeleton className="h-3 w-10 rounded" />
+                  </div>
                 </td>
-                <td className="hidden md:table-cell px-4 py-3">
-                  <Skeleton className="h-5 w-20 rounded-md" />
-                </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3.5">
                   <Skeleton className="h-3 w-20 rounded" />
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3.5 text-right">
                   <div className="flex items-center justify-end gap-1">
                     <Skeleton className="size-7 rounded-md" />
                     <Skeleton className="size-7 rounded-md" />

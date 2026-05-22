@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Briefcase01,
@@ -13,15 +13,16 @@ import {
   Wallet02,
   ChevronLeft,
   ChevronRight,
+  CalendarDate,
   Plus,
   Trash01,
+  CoinsHand,
 } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
+import { TypographyH2 } from "@/components/ui/typography";
 
 import { formatCurrency } from "@/lib/format";
 import {
@@ -97,22 +98,10 @@ export function IncomeContent({
     else fetchMonth(month + 1, year);
   }
 
-  function handleToggleReceived(source: IncomeSource) {
-    const next = !source.is_received;
+  function handleToggleReceived(id: string, newValue: boolean) {
     setSources((prev) =>
-      prev.map((s) => (s.id === source.id ? { ...s, is_received: next } : s)),
+      prev.map((s) => (s.id === id ? { ...s, is_received: newValue } : s)),
     );
-    startFetchTransition(async () => {
-      const result = await toggleIncomeReceived(source.id, next);
-      if (result.status === "error") {
-        toast.error(result.message);
-        setSources((prev) =>
-          prev.map((s) =>
-            s.id === source.id ? { ...s, is_received: !next } : s,
-          ),
-        );
-      }
-    });
   }
 
   const handleRefresh = useCallback(() => {
@@ -150,6 +139,10 @@ export function IncomeContent({
     .filter((s) => s.is_received)
     .reduce((sum, s) => sum + s.amount, 0);
   const totalPending = totalExpected - totalReceived;
+  const pct =
+    totalExpected > 0 ? Math.round((totalReceived / totalExpected) * 100) : 0;
+  const receivedCount = sources.filter((s) => s.is_received).length;
+  const pendingCount = sources.length - receivedCount;
 
   const listStyle = {
     opacity: isFetching ? 0.5 : 1,
@@ -159,39 +152,68 @@ export function IncomeContent({
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:gap-6">
+      <div className="flex flex-col gap-4 sm:gap-5">
+        {/* ── Heading ───────────────────────────────────────────────── */}
+        <div>
+          <TypographyH2>Income</TypographyH2>
+          <div className="mt-0.5 text-xs sm:text-13 text-muted-foreground">
+            <span className="sm:hidden">
+              {MONTH_LABELS[month - 1]} {year}
+              {totalExpected > 0 && ` · ${pct}% received`}
+            </span>
+            <span className="hidden sm:inline-flex sm:items-center sm:gap-1.5">
+              {MONTH_LABELS[month - 1]} {year} · Track expected vs received
+              {totalExpected > 0 && (
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-11 font-medium"
+                  style={{
+                    background: "var(--primary-soft)",
+                    color: "var(--primary)",
+                  }}
+                >
+                  {pct}% received
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+
         {/* ── Month navigator ───────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center h-8 sm:h-9 rounded-md border bg-card overflow-hidden">
             <button
               onClick={goToPrevMonth}
-              className="flex size-8 items-center justify-center rounded-md border transition-colors hover:bg-muted"
               disabled={isFetching}
+              className="flex h-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none disabled:opacity-40"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </button>
-            <div className="flex min-w-24 sm:min-w-36 items-center justify-center">
+            <div className="flex items-center gap-1.5 px-2.5 text-xs font-medium min-w-28 sm:min-w-32 justify-center">
+              <CalendarDate
+                size={13}
+                className="text-muted-foreground shrink-0"
+              />
               {isFetching ? (
-                <Spinner />
+                <Spinner className="size-3.5" />
               ) : (
-                <span className="text-xs sm:text-error md:text-sm font-semibold">
+                <span className="tabular-nums">
                   {MONTH_LABELS[month - 1]} {year}
                 </span>
               )}
             </div>
             <button
               onClick={goToNextMonth}
-              className="flex size-8 items-center justify-center rounded-md border transition-colors hover:bg-muted"
               disabled={isFetching}
+              className="flex h-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none disabled:opacity-40"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </button>
           </div>
 
           <Button
-            size="default"
+            size="sm"
             onClick={openCreateSheet}
-            className="gap-1.5 text-xs sm:text-sm"
+            className="shrink-0 gap-1.5"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">Add source</span>
@@ -199,24 +221,174 @@ export function IncomeContent({
           </Button>
         </div>
 
-        {/* ── Summary cards ─────────────────────────────────────────── */}
+        {/* ── Month progress card + stat cards ──────────────────────── */}
         {sources.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <SummaryCard
-              label="Expected"
-              value={formatCurrency(totalExpected)}
-              variant="default"
-            />
-            <SummaryCard
-              label="Received"
-              value={formatCurrency(totalReceived)}
-              variant="success"
-            />
-            <SummaryCard
-              label="Pending"
-              value={formatCurrency(totalPending)}
-              variant={totalPending > 0 ? "pending" : "default"}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            {/* Progress card — spans 2 cols on sm+ */}
+            <div
+              className="sm:col-span-2 rounded-xl border p-4 sm:p-5 shadow-card"
+              style={{
+                background: "linear-gradient(160deg, var(--stat-accent-start), var(--card) 70%)",
+                borderColor: "var(--stat-accent-border)",
+              }}
+            >
+              {/* ── Desktop layout ── */}
+              <div className="hidden sm:block">
+                <p className="text-13 font-semibold">Month progress</p>
+                <p className="text-11 text-muted-foreground mt-0.5 mb-4">
+                  {MONTH_LABELS[month - 1]} {year}
+                  {totalExpected > 0 && ` · ${pct}% received`}
+                </p>
+
+                {/* Amount row */}
+                <div className="flex items-end justify-between mb-3">
+                  <div className="flex items-end gap-0.5">
+                    <span className="text-xs text-muted-foreground">₹</span>
+                    <span className="text-2xl font-semibold tabular-nums tracking-tight leading-none">
+                      {formatCurrency(totalReceived).slice(1)}
+                    </span>
+                  </div>
+                  <p className="text-11 text-muted-foreground self-start">
+                    of {formatCurrency(totalExpected)} expected
+                  </p>
+                </div>
+
+                {/* Progress bar */}
+                <ProgressBar
+                  received={totalReceived}
+                  expected={totalExpected}
+                  pending={totalPending}
+                />
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 mt-2 text-11 text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="size-2 rounded-sm inline-block"
+                      style={{ background: "var(--primary)" }}
+                    />
+                    Received
+                  </span>
+                  {totalPending > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="size-2 rounded-sm inline-block"
+                        style={{ background: "var(--warning)" }}
+                      />
+                      Pending
+                    </span>
+                  )}
+                  <span className="ml-auto">
+                    {sources.length} source{sources.length !== 1 ? "s" : ""}{" "}
+                    tracked
+                  </span>
+                </div>
+              </div>
+
+              {/* ── Mobile layout ── */}
+              <div className="sm:hidden">
+                <p className="text-11 text-muted-foreground">
+                  Received this month
+                </p>
+
+                <div className="flex items-end gap-0.5 mt-1">
+                  <span className="text-xs text-muted-foreground">₹</span>
+                  <span className="text-2xl font-semibold tabular-nums tracking-tight leading-none">
+                    {formatCurrency(totalReceived).slice(1)}
+                  </span>
+                </div>
+
+                <p className="text-11 text-muted-foreground mt-1.5">
+                  of {formatCurrency(totalExpected)} expected
+                </p>
+
+                {/* Progress bar */}
+                <div className="mt-3">
+                  <ProgressBar
+                    received={totalReceived}
+                    expected={totalExpected}
+                    pending={totalPending}
+                  />
+                </div>
+
+                {/* Bottom row */}
+                <div className="flex items-center justify-between mt-2 text-11 text-muted-foreground">
+                  <span>
+                    Received{" "}
+                    <span
+                      className="font-medium"
+                      style={{ color: "var(--success)" }}
+                    >
+                      {formatCurrency(totalReceived)}
+                    </span>
+                  </span>
+                  {totalPending > 0 && (
+                    <span>
+                      Pending{" "}
+                      <span
+                        className="font-medium"
+                        style={{ color: "var(--warning)" }}
+                      >
+                        {formatCurrency(totalPending)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Source mix */}
+            <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-card">
+              <p className="text-xs sm:text-13 font-semibold mb-0.5">
+                Source mix
+              </p>
+              <p className="text-11 text-muted-foreground mb-3">
+                % of monthly income
+              </p>
+              <div className="flex flex-col gap-3">
+                {sources
+                  .filter((s) => s.amount > 0)
+                  .slice(0, 4)
+                  .map((s, i) => {
+                    const pct =
+                      totalExpected > 0
+                        ? Math.round((s.amount / totalExpected) * 100)
+                        : 0;
+                    const barColors = [
+                      "var(--chart-2)",
+                      "var(--warning)",
+                      "var(--info)",
+                      "var(--chart-4)",
+                    ];
+                    const c = barColors[i % barColors.length];
+                    return (
+                      <div key={s.id}>
+                        <div className="flex items-center justify-between text-11 sm:text-xs mb-1">
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <span
+                              className="size-2 rounded-sm inline-block"
+                              style={{ background: c }}
+                            />
+                            {s.name}
+                          </span>
+                          <span className="font-medium tabular-nums text-foreground">
+                            {formatCurrency(s.amount)} · {pct}%
+                          </span>
+                        </div>
+                        <div
+                          className="h-1.5 rounded-full overflow-hidden"
+                          style={{ background: "var(--muted)" }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${pct}%`, background: c }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -229,54 +401,57 @@ export function IncomeContent({
           />
         ) : (
           <>
+            {/* Mobile: "Income sources" heading */}
+            <p className="sm:hidden text-xs font-semibold tracking-tight px-0.5">
+              Income sources
+            </p>
+
             {/* Mobile: card list (hidden on sm+) */}
-            <div
-              className="sm:hidden overflow-hidden rounded-xl border divide-y"
-              style={listStyle}
-            >
+            <div className="sm:hidden flex flex-col gap-1" style={listStyle}>
               {sources.map((source) => (
                 <IncomeSourceCard
                   key={source.id}
                   source={source}
                   onCardClick={openEditSheet}
-                  onToggleReceived={handleToggleReceived}
-                  onDelete={handleDeleteSource}
                 />
               ))}
             </div>
 
             {/* Tablet/Desktop: table (hidden on mobile) */}
             <div
-              className="hidden sm:block overflow-hidden rounded-xl border"
+              className="hidden sm:block overflow-hidden rounded-xl border bg-card"
               style={listStyle}
             >
-              <table className="w-full text-sm">
+              {/* Card header */}
+              <div className="px-4 sm:px-5 py-3 flex items-center justify-between border-b">
+                <div>
+                  <p className="text-13 font-semibold">Income sources</p>
+                  <p className="mt-0.5 text-11 sm:text-xs text-muted-foreground">
+                    {sources.length} source{sources.length !== 1 ? "s" : ""} ·{" "}
+                    {receivedCount} received · {pendingCount} pending
+                  </p>
+                </div>
+              </div>
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b bg-muted/60 text-1.5xs sm:text-xs text-muted-foreground uppercase tracking-wide">
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Name
+                  <tr className="border-b bg-muted light:bg-muted/50 text-10 font-medium uppercase tracking-[0.08em] text-subtle-foreground">
+                    <th className="px-4 py-2.5 text-left">Source</th>
+                    <th className="px-4 py-2.5 text-left">Type</th>
+                    <th className="px-4 py-2.5 text-left">Status</th>
+                    <th className="hidden md:table-cell px-4 py-2.5 text-left">
+                      Date
                     </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Type
-                    </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-left font-medium">
-                      Status
-                    </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-right font-medium">
-                      Amount
-                    </th>
-                    <th className="px-3 sm:px-4 py-2.5 text-right font-medium">
-                      Actions
-                    </th>
+                    <th className="px-4 py-2.5 text-right">Amount</th>
+                    <th className="w-10 px-4 py-2.5"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody>
                   {sources.map((source) => (
                     <IncomeSourceRow
                       key={source.id}
                       source={source}
                       onRowClick={openEditSheet}
-                      onToggleReceived={handleToggleReceived}
+                      onToggleSuccess={handleToggleReceived}
                       onDelete={handleDeleteSource}
                     />
                   ))}
@@ -300,37 +475,42 @@ export function IncomeContent({
   );
 }
 
-// ─── Summary card ─────────────────────────────────────────────────────────────
+// ─── Progress bar ─────────────────────────────────────────────────────────────
 
-function SummaryCard({
-  label,
-  value,
-  variant,
+function ProgressBar({
+  received,
+  expected,
+  pending,
 }: {
-  label: string;
-  value: string;
-  variant: "default" | "success" | "pending";
+  received: number;
+  expected: number;
+  pending: number;
 }) {
-  const valueClass =
-    variant === "success"
-      ? "text-emerald-600"
-      : variant === "pending"
-        ? "text-amber-600"
-        : "text-foreground";
-
   return (
-    <div className="flex flex-col gap-0.5 sm:gap-1 rounded-xl border bg-card p-3 sm:p-4">
-      <p className="text-[10px] sm:text-1.5xs md:text-xs text-muted-foreground">
-        {label}
-      </p>
-      <p
-        className={cn(
-          "text-sm sm:text-base md:text-lg font-semibold tabular-nums truncate",
-          valueClass,
-        )}
-      >
-        {value}
-      </p>
+    <div
+      className="h-2.5 rounded-full flex overflow-hidden"
+      style={{ background: "var(--muted)" }}
+    >
+      {expected > 0 && (
+        <>
+          <div
+            className="h-full rounded-l-full transition-all"
+            style={{
+              width: `${Math.min(100, (received / expected) * 100)}%`,
+              background: "var(--primary)",
+            }}
+          />
+          {pending > 0 && (
+            <div
+              className="h-full"
+              style={{
+                width: `${Math.min(100 - (received / expected) * 100, (pending / expected) * 100)}%`,
+                background: "var(--warning)",
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -340,77 +520,82 @@ function SummaryCard({
 function IncomeSourceCard({
   source,
   onCardClick,
-  onToggleReceived,
-  onDelete,
 }: {
   source: IncomeSource;
   onCardClick: (source: IncomeSource) => void;
-  onToggleReceived: (source: IncomeSource) => void;
-  onDelete: (source: IncomeSource) => void;
 }) {
   const Icon = TYPE_ICONS[source.source_type];
   const color = INCOME_SOURCE_TYPE_COLORS[source.source_type];
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors"
+      className="flex items-center gap-3 px-4 py-3.5 cursor-pointer rounded-xl border bg-card hover:bg-muted/30 active:bg-muted/50 transition-colors"
       onClick={() => onCardClick(source)}
     >
       {/* Icon */}
       <div
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg"
-        style={{
-          backgroundColor: `${color}1a`,
-          border: `1px solid ${color}30`,
-        }}
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg"
+        style={{ background: `${color}18`, color }}
       >
-        <Icon size={14} style={{ color }} />
+        <Icon size={16} style={{ color }} />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium truncate">{source.name}</span>
-          <span className="text-xs font-semibold tabular-nums shrink-0">
-            {formatCurrency(source.amount)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-muted-foreground">
-            {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
-          </span>
-          <span className="text-[10px] text-muted-foreground">·</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleReceived(source);
+        <p className="text-xs font-medium truncate">{source.name}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          {/* Type badge */}
+          <span
+            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-10 font-medium"
+            style={{
+              background: "var(--muted)",
+              color: "var(--muted-foreground)",
             }}
           >
-            <Badge
-              variant={source.is_received ? "default" : "secondary"}
-              className={cn(
-                "text-[10px] h-4 px-1.5 transition-colors",
-                source.is_received
-                  ? "border-transparent bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "hover:bg-muted",
-              )}
+            {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
+          </span>
+          {/* Status badge */}
+          {source.is_received ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-10 font-medium"
+              style={{
+                background:
+                  "color-mix(in oklch, var(--success) 12%, transparent)",
+                color: "var(--success)",
+              }}
             >
-              {source.is_received ? "Received" : "Pending"}
-            </Badge>
-          </button>
+              <span
+                className="size-1.5 rounded-full shrink-0"
+                style={{ background: "var(--success)" }}
+              />
+              Received
+            </span>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-10 font-medium"
+              style={{
+                background: "var(--warning-soft)",
+                color: "var(--warning)",
+              }}
+            >
+              <span
+                className="size-1.5 rounded-full shrink-0"
+                style={{ background: "var(--warning)" }}
+              />
+              Pending
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Delete */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(source);
-        }}
-        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+      {/* Amount — sibling so it centers with the icon */}
+      <span
+        className="flex items-center gap-0.5 text-sm font-semibold tabular-nums shrink-0"
+        style={{ color: "var(--success)" }}
       >
-        <Trash01 size={13} />
-      </button>
+        <Plus size={12} strokeWidth={2.5} />
+        {formatCurrency(source.amount)}
+      </span>
     </div>
   );
 }
@@ -420,72 +605,129 @@ function IncomeSourceCard({
 function IncomeSourceRow({
   source,
   onRowClick,
-  onToggleReceived,
+  onToggleSuccess,
   onDelete,
 }: {
   source: IncomeSource;
   onRowClick: (source: IncomeSource) => void;
-  onToggleReceived: (source: IncomeSource) => void;
+  onToggleSuccess: (id: string, newValue: boolean) => void;
   onDelete: (source: IncomeSource) => void;
 }) {
+  const [optimisticReceived, setOptimisticReceived] = useOptimistic(
+    source.is_received,
+  );
+  const [, startToggleTransition] = useTransition();
   const Icon = TYPE_ICONS[source.source_type];
   const color = INCOME_SOURCE_TYPE_COLORS[source.source_type];
 
+  function handleToggle() {
+    const next = !optimisticReceived;
+    startToggleTransition(async () => {
+      setOptimisticReceived(next);
+      const result = await toggleIncomeReceived(source.id, next);
+      if (result.status === "error") {
+        toast.error(result.message);
+      } else {
+        onToggleSuccess(source.id, next);
+      }
+    });
+  }
+
   return (
     <tr
-      className="group cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/40"
+      className="group cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
       onClick={() => onRowClick(source)}
     >
       {/* Name */}
-      <td className="px-3 sm:px-4 py-3">
-        <div className="flex items-center gap-2.5">
+      <td className="px-4 py-3.5">
+        <div className="flex items-center gap-3">
           <div
-            className="flex size-7 shrink-0 items-center justify-center rounded-md"
-            style={{
-              backgroundColor: `${color}1a`,
-              border: `1px solid ${color}30`,
-            }}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: `${color}18`, color }}
           >
-            <Icon size={14} style={{ color }} />
+            <Icon size={15} style={{ color }} />
           </div>
-          <span className="max-w-28 sm:max-w-40 md:max-w-52 truncate font-medium text-error sm:text-sm">
-            {source.name}
-          </span>
+          <div className="min-w-0">
+            <p className="truncate text-13 font-medium max-w-36 sm:max-w-48">
+              {source.name}
+            </p>
+            <p className="text-11 text-muted-foreground mt-0.5">
+              {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
+            </p>
+          </div>
         </div>
       </td>
 
       {/* Type */}
-      <td className="px-3 sm:px-4 py-3">
-        <span className="rounded-md bg-muted px-2 py-0.5 text-1.5xs sm:text-xs text-muted-foreground font-medium">
+      <td className="px-4 py-3.5">
+        <span
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-11 font-medium"
+          style={{
+            background: `color-mix(in oklch, ${color} 14%, var(--muted))`,
+            color,
+          }}
+        >
+          <span
+            className="size-1.5 rounded-full shrink-0"
+            style={{ background: color }}
+          />
           {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
         </span>
       </td>
 
-      {/* Status */}
-      <td className="px-3 sm:px-4 py-3" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => onToggleReceived(source)}>
-          <Badge
-            variant={source.is_received ? "default" : "secondary"}
-            className={cn(
-              "text-1.5xs transition-colors",
-              source.is_received
-                ? "border-transparent bg-emerald-600 text-white hover:bg-emerald-700"
-                : "hover:bg-muted",
-            )}
+      {/* Status — clickable toggle */}
+      <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={handleToggle}
+          className="transition-opacity hover:opacity-80"
+        >
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-11 font-medium"
+            style={
+              optimisticReceived
+                ? { background: "var(--primary-soft)", color: "var(--primary)" }
+                : { background: "var(--warning-soft)", color: "var(--warning)" }
+            }
           >
-            {source.is_received ? "Received" : "Pending"}
-          </Badge>
+            <span
+              className="size-1.5 rounded-full shrink-0"
+              style={{
+                background: optimisticReceived
+                  ? "var(--primary)"
+                  : "var(--warning)",
+              }}
+            />
+            {optimisticReceived ? "Received" : "Pending"}
+          </span>
         </button>
       </td>
 
-      {/* Amount — right-aligned */}
-      <td className="px-3 sm:px-4 py-3 text-right text-error sm:text-sm font-semibold tabular-nums text-foreground">
-        {formatCurrency(source.amount)}
+      {/* Date */}
+      <td className="hidden md:table-cell px-4 py-3.5 text-xs text-muted-foreground">
+        {optimisticReceived && source.received_at ? (
+          new Date(source.received_at).toLocaleDateString("en-IN", {
+            month: "short",
+            year: "numeric",
+          })
+        ) : (
+          <span className="text-muted-foreground/40">—</span>
+        )}
+      </td>
+
+      {/* Amount */}
+      <td
+        className="px-4 py-3.5 text-right"
+        style={{ color: "var(--success)" }}
+      >
+        <span className="inline-flex items-center justify-end gap-0.5 text-sm font-semibold tabular-nums">
+          <Plus size={12} strokeWidth={2.5} />
+          {formatCurrency(source.amount)}
+        </span>
       </td>
 
       {/* Actions */}
       <td
-        className="px-3 sm:px-4 py-3 text-right"
+        className="px-4 py-3.5 text-right"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -511,21 +753,19 @@ function EmptyState({
   onAddClick: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center">
-      <div className="mb-3 flex size-12 sm:size-14 items-center justify-center rounded-full bg-muted">
-        <span className="text-xl sm:text-2xl">💰</span>
+    <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center rounded-xl border bg-card">
+      <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-muted">
+        <CoinsHand size={20} className="text-muted-foreground" />
       </div>
-      <p className="text-xs sm:text-sm font-medium">
-        No income sources for {month} {year}
+      <p className="text-xs sm:text-13 font-medium">
+        No income for {month} {year}
       </p>
-      <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-        Add the income you expect to receive this month.
+      <p className="mt-1 text-11 sm:text-xs text-muted-foreground max-w-xs">
+        Track the income you expect to receive this month.
       </p>
-      <Button size="sm" className="mt-5" onClick={onAddClick}>
-        <span className="flex items-center justify-center gap-1.5">
-          <Plus size={15} />
-          Add source
-        </span>
+      <Button size="sm" className="mt-5 gap-1.5" onClick={onAddClick}>
+        <Plus size={15} />
+        Add source
       </Button>
     </div>
   );
@@ -535,37 +775,56 @@ function EmptyState({
 
 export function IncomeContentSkeleton() {
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-40 sm:w-48 rounded-md" />
-        <Skeleton className="h-8 w-16 sm:w-24 rounded-md" />
+    <div className="flex flex-col gap-4 sm:gap-5">
+      {/* Heading skeleton */}
+      <div className="space-y-1.5">
+        <Skeleton className="h-6 w-24 rounded" />
+        <Skeleton className="h-3.5 w-56 rounded" />
       </div>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="flex flex-col gap-1.5 rounded-xl border p-3 sm:p-4"
-          >
-            <Skeleton className="h-2.5 w-14 rounded" />
-            <Skeleton className="h-5 sm:h-6 w-20 rounded" />
+
+      {/* Month nav skeleton */}
+      <div className="flex items-center justify-end gap-2">
+        <Skeleton className="h-8 sm:h-9 w-36 rounded-md" />
+        <Skeleton className="h-8 sm:h-9 w-24 rounded-lg" />
+      </div>
+
+      {/* Progress card skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+        <div className="sm:col-span-2 rounded-xl border bg-card p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="space-y-1.5">
+              <Skeleton className="h-3.5 w-28 rounded" />
+              <Skeleton className="h-2.5 w-20 rounded" />
+            </div>
           </div>
-        ))}
+          <Skeleton className="h-7 w-32 rounded mb-2" />
+          <Skeleton className="h-2.5 w-full rounded-full" />
+        </div>
+        <div className="rounded-xl border bg-card p-4 sm:p-5 space-y-3">
+          <Skeleton className="h-3.5 w-20 rounded" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-1">
+              <div className="flex justify-between">
+                <Skeleton className="h-2.5 w-20 rounded" />
+                <Skeleton className="h-2.5 w-16 rounded" />
+              </div>
+              <Skeleton className="h-1.5 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Mobile card skeletons */}
       <div className="sm:hidden overflow-hidden rounded-xl border divide-y">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <div key={i} className="flex items-center gap-3 px-4 py-3.5">
             <Skeleton className="size-8 rounded-lg shrink-0" />
             <div className="flex-1 min-w-0 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <Skeleton className="h-3 w-24 rounded" />
                 <Skeleton className="h-3 w-16 rounded shrink-0" />
               </div>
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-2.5 w-14 rounded" />
-                <Skeleton className="h-4 w-14 rounded-full" />
-              </div>
+              <Skeleton className="h-2.5 w-14 rounded" />
             </div>
             <Skeleton className="size-7 rounded-md shrink-0" />
           </div>
@@ -574,12 +833,12 @@ export function IncomeContentSkeleton() {
 
       {/* Desktop table skeleton */}
       <div className="hidden sm:block overflow-hidden rounded-xl border">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs sm:text-13">
           <thead>
-            <tr className="border-b bg-muted/60">
-              {["Name", "Type", "Status", "Amount", "Actions"].map((h) => (
-                <th key={h} className="px-4 py-2.5 text-left">
-                  <Skeleton className="h-2.5 w-10 rounded" />
+            <tr className="border-b bg-muted/40">
+              {[...Array(5)].map((_, i) => (
+                <th key={i} className="px-4 py-3 text-left">
+                  <Skeleton className="h-2.5 w-14 rounded" />
                 </th>
               ))}
             </tr>
@@ -587,23 +846,29 @@ export function IncomeContentSkeleton() {
           <tbody>
             {[...Array(3)].map((_, i) => (
               <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-3">
+                <td className="px-4 py-3.5">
                   <div className="flex items-center gap-2.5">
-                    <Skeleton className="size-7 rounded-md shrink-0" />
-                    <Skeleton className="h-3.5 w-28 rounded" />
+                    <Skeleton className="size-8 rounded-lg shrink-0" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-28 rounded" />
+                      <Skeleton className="h-2.5 w-16 rounded" />
+                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <Skeleton className="h-5 w-16 rounded-md" />
+                <td className="px-4 py-3.5">
+                  <Skeleton className="h-3 w-16 rounded" />
                 </td>
-                <td className="px-4 py-3">
-                  <Skeleton className="h-5 w-16 rounded-full" />
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-1.5">
+                    <Skeleton className="size-1.5 rounded-full" />
+                    <Skeleton className="h-3 w-14 rounded" />
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <Skeleton className="ml-auto h-3.5 w-16 rounded" />
+                <td className="px-4 py-3.5 text-right">
+                  <Skeleton className="ml-auto h-3.5 w-20 rounded" />
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <Skeleton className="ml-auto size-7 rounded-md" />
+                <td className="px-4 py-3.5 text-right">
+                  <Skeleton className="ml-auto size-7 rounded-lg" />
                 </td>
               </tr>
             ))}

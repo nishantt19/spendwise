@@ -19,7 +19,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-type UntitledIcon = FC<SVGProps<SVGSVGElement> & { size?: number; color?: string }>;
+type UntitledIcon = FC<
+  SVGProps<SVGSVGElement> & { size?: number; color?: string }
+>;
 
 type NavItem = {
   name: string;
@@ -28,11 +30,11 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { name: "Dashboard",  url: "/",             icon: BarChartSquare02 },
-  { name: "Expenses",   url: "/transactions", icon: CreditCard02     },
-  { name: "Income",     url: "/income",       icon: Wallet01         },
-  { name: "Recurring",  url: "/recurring",    icon: RefreshCw04      },
-  { name: "Categories", url: "/categories",   icon: Grid01           },
+  { name: "Dashboard", url: "/", icon: BarChartSquare02 },
+  { name: "Expenses", url: "/transactions", icon: CreditCard02 },
+  { name: "Income", url: "/income", icon: Wallet01 },
+  { name: "Recurring", url: "/recurring", icon: RefreshCw04 },
+  { name: "Categories", url: "/categories", icon: Grid01 },
 ];
 
 export function NavMain() {
@@ -40,7 +42,9 @@ export function NavMain() {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-10 sm:text-11 uppercase">
+        Platform
+      </SidebarGroupLabel>
       <SidebarMenu className="gap-0.5">
         {navItems.map((item) => (
           <SidebarMenuItem key={item.url}>
@@ -48,7 +52,7 @@ export function NavMain() {
               asChild
               tooltip={item.name}
               isActive={pathname === item.url}
-              className="relative h-9 transition-colors duration-150 data-[active=true]:bg-sidebar-primary/10 data-[active=true]:text-sidebar-primary data-[active=true]:font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+              className="text-sidebar-foreground/70 hover:text-sidebar-foreground data-[active=true]:text-sidebar-primary"
             >
               <Link href={item.url} className="flex items-center gap-2.5">
                 {item.icon && <item.icon size={18} />}

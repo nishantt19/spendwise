@@ -10,6 +10,53 @@ import type {
   CategoryFormData,
 } from "@/types/categories";
 
+export type CategoryStat = {
+  category_id: string;
+  amount: number;
+  count: number;
+};
+
+export async function getCategoryStats(
+  month: number,
+  year: number,
+): Promise<{ data: CategoryStat[]; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { data: [], error: "Unauthorized" };
+
+  const mm = String(month).padStart(2, "0");
+  const lastDay = new Date(year, month, 0).getDate();
+  const dateFrom = `${year}-${mm}-01`;
+  const dateTo = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("category_id, amount")
+    .eq("user_id", user.id)
+    .eq("type", "expense")
+    .eq("is_deleted", false)
+    .gte("date", dateFrom)
+    .lte("date", dateTo)
+    .not("category_id", "is", null);
+
+  if (error) return { data: [], error: error.message };
+
+  const map = new Map<string, { amount: number; count: number }>();
+  for (const row of data ?? []) {
+    if (!row.category_id) continue;
+    const cur = map.get(row.category_id) ?? { amount: 0, count: 0 };
+    map.set(row.category_id, { amount: cur.amount + row.amount, count: cur.count + 1 });
+  }
+
+  return {
+    data: [...map.entries()].map(([category_id, s]) => ({ category_id, ...s })),
+    error: null,
+  };
+}
+
 export async function getCategories(): Promise<{
   expense: Category[];
   income: Category[];

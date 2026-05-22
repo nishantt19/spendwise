@@ -1,3 +1,4 @@
+import "./lib/env"; // validates env vars at build time
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

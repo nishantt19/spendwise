@@ -6,9 +6,14 @@ export const categorySchema = z.object({
     .min(1, "Name is required")
     .max(50, "Name must be 50 characters or less")
     .trim(),
-  icon: z.string().min(1, "Please select an icon").max(10, "Icon is too long"),
+  icon: z.string().min(1, "Please select an icon").max(30, "Icon is too long"),
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color"),
   type: z.enum(["expense", "income"]),
+  monthly_budget: z
+    .number()
+    .positive("Budget must be greater than 0")
+    .nullable()
+    .optional(),
 });

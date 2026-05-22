@@ -1,140 +1,117 @@
 "use client";
 
-import { Plus, SearchMd, FilterLines } from "@untitledui/icons";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarDate,
+  Plus,
+} from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "@/schema/transactions";
-import { CategoryIcon } from "@/lib/category-icons";
-import type { Category } from "@/types/categories";
+import { Spinner } from "@/components/ui/spinner";
+import { MONTH_LABELS } from "@/schema/income-sources";
+import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type PaymentMethodTab = "all" | "card" | "upi" | "cash";
+
 export type FilterState = {
-  search: string;
-  categoryId: string;
-  paymentMethod: string;
+  paymentMethodTab: PaymentMethodTab;
 };
 
 type TransactionsFiltersProps = {
   filters: FilterState;
-  categories: Category[];
-  activeFilterCount: number;
-  onFilterChange: (key: keyof FilterState, value: string) => void;
-  onClearAll: () => void;
+  month: number;
+  year: number;
+  isPending: boolean;
+  onFilterChange: (tab: PaymentMethodTab) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
   onAddClick: () => void;
 };
+
+const METHOD_TABS: { key: PaymentMethodTab; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "card", label: "Card" },
+  { key: "upi", label: "UPI" },
+  { key: "cash", label: "Cash" },
+];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function TransactionsFilters({
   filters,
-  categories,
-  activeFilterCount,
+  month,
+  year,
+  isPending,
   onFilterChange,
-  onClearAll,
+  onPrevMonth,
+  onNextMonth,
   onAddClick,
 }: TransactionsFiltersProps) {
-  return (
-    <div className="flex flex-col gap-2 sm:gap-3">
-      {/* ── Top row: search + add button ──────────────────────────────── */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <SearchMd
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            placeholder="Search expenses..."
-            value={filters.search}
-            onChange={(e) => onFilterChange("search", e.target.value)}
-            className="pl-9 text-xs sm:text-sm"
-          />
-        </div>
+  const activeTab = filters.paymentMethodTab;
 
-        <Button
-          size="default"
-          className="shrink-0 gap-1.5 text-xs sm:text-sm"
-          onClick={onAddClick}
+  const tabStrip = (
+    <div className="flex items-center gap-0.5 rounded-lg p-0.5 h-8 sm:h-9 bg-muted">
+      {METHOD_TABS.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => onFilterChange(t.key)}
+          className={cn(
+            "flex items-center rounded-md px-2.5 h-full text-xs font-medium transition-all",
+            activeTab === t.key
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
         >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const monthNav = (
+    <div className="flex items-center h-8 sm:h-9 rounded-md border bg-card overflow-hidden">
+      <button
+        onClick={onPrevMonth}
+        disabled={isPending}
+        className="flex h-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none disabled:opacity-40"
+      >
+        <ChevronLeft size={14} />
+      </button>
+      <div className="flex items-center gap-1.5 px-2.5 text-xs font-medium min-w-28 sm:min-w-32 justify-center">
+        <CalendarDate size={13} className="text-muted-foreground shrink-0" />
+        {isPending ? (
+          <Spinner className="size-3.5" />
+        ) : (
+          <span className="tabular-nums">
+            {MONTH_LABELS[month - 1]} {year}
+          </span>
+        )}
+      </div>
+      <button
+        onClick={onNextMonth}
+        disabled={isPending}
+        className="flex h-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none disabled:opacity-40"
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+      {/* Mobile: month nav + add button on same line */}
+      {/* sm+: all three in one line */}
+      <div className="flex items-center justify-end gap-2">
+        <div className="hidden sm:block">{tabStrip}</div>
+        {monthNav}
+        <Button size="sm" className="shrink-0 gap-1.5" onClick={onAddClick}>
           <Plus size={15} />
           <span className="hidden sm:inline">Add expense</span>
           <span className="sm:hidden">Add</span>
         </Button>
-      </div>
-
-      {/* ── Filter row — horizontally scrollable on mobile ────────────── */}
-      <div className="flex items-center gap-2">
-        <FilterLines size={15} className="shrink-0 text-muted-foreground" />
-
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
-          {/* Category */}
-          <Select
-            value={filters.categoryId || "_all"}
-            onValueChange={(val) =>
-              onFilterChange("categoryId", val === "_all" ? "" : val)
-            }
-          >
-            <SelectTrigger className="h-8 w-36 sm:w-40 shrink-0 text-xs">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">All categories</SelectItem>
-              {categories
-                .filter((c) => c.type === "expense")
-                .map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <span className="flex items-center gap-1.5">
-                      <CategoryIcon icon={cat.icon} size={13} />
-                      <span>{cat.name}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
-          {/* Payment method */}
-          <Select
-            value={filters.paymentMethod || "_all"}
-            onValueChange={(val) =>
-              onFilterChange("paymentMethod", val === "_all" ? "" : val)
-            }
-          >
-            <SelectTrigger className="h-8 w-32 sm:w-36 shrink-0 text-xs">
-              <SelectValue placeholder="Payment" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">All methods</SelectItem>
-              {PAYMENT_METHODS.map((method) => (
-                <SelectItem key={method} value={method}>
-                  {PAYMENT_METHOD_LABELS[method]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Clear all */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={onClearAll}
-              className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Clear
-              <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                {activeFilterCount}
-              </Badge>
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

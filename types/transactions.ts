@@ -37,6 +37,7 @@ export type TransactionFilters = {
   type?: TransactionType;
   category_id?: string;
   payment_method?: PaymentMethod;
+  payment_methods?: PaymentMethod[];
   date_from?: string;
   date_to?: string;
 };

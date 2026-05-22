@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { TypographyH2 } from "@/components/ui/typography";
 
-import { getCategories } from "@/actions/categories";
+import { getCategories, getCategoryStats } from "@/actions/categories";
 import { CategoriesContent } from "@/features/categories/categories-content";
 
 export const metadata: Metadata = {
@@ -9,18 +10,22 @@ export const metadata: Metadata = {
 };
 
 export default async function CategoriesPage() {
-  const { expense, income } = await getCategories();
+  const now = new Date();
+  const [{ expense, income }, { data: stats }] = await Promise.all([
+    getCategories(),
+    getCategoryStats(now.getMonth() + 1, now.getFullYear()),
+  ]);
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
+    <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Categories</h1>
-        <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
+        <TypographyH2>Categories</TypographyH2>
+        <p className="mt-0.5 text-xs sm:text-13 text-muted-foreground">
           Organise your transactions with custom expense and income categories.
         </p>
       </div>
 
-      <CategoriesContent expense={expense} income={income} />
+      <CategoriesContent expense={expense} income={income} stats={stats} />
     </div>
   );
 }

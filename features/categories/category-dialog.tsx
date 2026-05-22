@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
   deleteCategory,
   updateCategory,
 } from "@/actions/categories";
+import { CategoryIcon, ICON_NAME_MAP } from "@/lib/category-icons";
+import { getCategoryColor, getCategoryBg } from "@/lib/category-color";
 import type {
   Category,
   CategoryFormData,
@@ -32,58 +35,27 @@ import type {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PRESET_COLORS = [
-  "#ef4444",
-  "#f97316",
-  "#f59e0b",
-  "#eab308",
-  "#84cc16",
-  "#22c55e",
-  "#10b981",
-  "#06b6d4",
-  "#3b82f6",
-  "#6366f1",
-  "#8b5cf6",
-  "#a855f7",
-  "#ec4899",
-  "#64748b",
-  "#6b7280",
-  "#0f172a",
+  "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e",
+  "#10b981", "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7",
+  "#ec4899", "#64748b", "#6b7280", "#0f172a",
 ];
 
-const PRESET_ICONS: Record<CategoryType, string[]> = {
+// Icon names (stored in DB) shown in picker per category type
+const PRESET_ICON_NAMES: Record<CategoryType, string[]> = {
   expense: [
-    "🍽️",
-    "🚗",
-    "🏠",
-    "⚡",
-    "🏥",
-    "🛍️",
-    "🎬",
-    "📚",
-    "✈️",
-    "💆",
-    "📱",
-    "💸",
-    "🎮",
-    "🐾",
-    "🔧",
-    "💡",
-    "🧴",
-    "🏋️",
+    "Receipt", "ShoppingCart01", "ShoppingBag01", "Home01",
+    "Car01", "Plane", "Bus", "Train",
+    "MedicalCross", "Activity", "GraduationHat01", "BookOpen01",
+    "GamingPad01", "Film01", "Monitor01", "MusicNote01",
+    "Phone01", "Lightbulb01", "Zap", "Repeat01",
+    "Scissors01", "Gift01", "CoinsHand", "Package",
+    "Palette", "Camera01", "Briefcase01", "Tag01",
   ],
   income: [
-    "💼",
-    "💻",
-    "📈",
-    "🎁",
-    "💰",
-    "🏦",
-    "🤝",
-    "🏢",
-    "🎯",
-    "💎",
-    "🌟",
-    "🔑",
+    "Briefcase01", "Laptop01", "Building07", "TrendUp01",
+    "Home01", "Gift01", "CreditCard02", "Wallet02",
+    "CoinsHand", "BankNote01", "Star01", "Award01",
+    "HeartHand", "Globe01", "Diamond01", "PiggyBank01",
   ],
 };
 
@@ -105,6 +77,8 @@ export function CategoryDialog({
   category,
 }: CategoryDialogProps) {
   const isEditing = !!category;
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -120,9 +94,10 @@ export function CategoryDialog({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
-      icon: PRESET_ICONS[defaultType][0],
+      icon: PRESET_ICON_NAMES[defaultType][0],
       color: "#6366f1",
       type: defaultType,
+      monthly_budget: null,
     },
   });
 
@@ -133,25 +108,28 @@ export function CategoryDialog({
   const watchedColor = useWatch({ control, name: "color" });
   const watchedType = useWatch({ control, name: "type" });
 
-  const iconPresets = PRESET_ICONS[watchedType];
+  const iconPresets = PRESET_ICON_NAMES[watchedType];
+  const previewColor = getCategoryColor(watchedColor, isDark);
+  const previewIconBg = getCategoryBg(watchedColor, isDark);
 
-  // Sync form values whenever sheet opens or category changes
   useEffect(() => {
     if (!open) return;
 
     if (category) {
       reset({
         name: category.name,
-        icon: category.icon ?? PRESET_ICONS[category.type][0],
+        icon: category.icon ?? PRESET_ICON_NAMES[category.type][0],
         color: category.color,
         type: category.type,
+        monthly_budget: category.monthly_budget ?? null,
       });
     } else {
       reset({
         name: "",
-        icon: PRESET_ICONS[defaultType][0],
+        icon: PRESET_ICON_NAMES[defaultType][0],
         color: "#6366f1",
         type: defaultType,
+        monthly_budget: null,
       });
     }
   }, [open, category, defaultType, reset]);
@@ -188,7 +166,6 @@ export function CategoryDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      {/* Mobile: 95vw wide. sm+: standard max-w-md. Close button visible. */}
       <SheetContent
         className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
         side="right"
@@ -198,14 +175,13 @@ export function CategoryDialog({
           <SheetTitle className="text-base sm:text-lg">
             {isEditing ? `Edit "${category.name}"` : "New Category"}
           </SheetTitle>
-          <SheetDescription className="text-xs sm:text-sm">
+          <SheetDescription className="text-xs sm:text-13">
             {isEditing
               ? "Update this category's details."
               : `Create a new ${defaultType} category.`}
           </SheetDescription>
         </SheetHeader>
 
-        {/* ── Scrollable body + fixed footer, wrapped in form ────────── */}
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex flex-1 flex-col min-h-0 overflow-hidden"
@@ -215,19 +191,16 @@ export function CategoryDialog({
             {/* ── Live preview ─────────────────────────────────────── */}
             <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
               <div
-                className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-lg text-lg sm:text-xl"
-                style={{
-                  backgroundColor: `${watchedColor}1a`,
-                  border: `1.5px solid ${watchedColor}40`,
-                }}
+                className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-lg"
+                style={{ background: previewIconBg, color: previewColor }}
               >
-                {watchedIcon || "?"}
+                <CategoryIcon icon={watchedIcon} size={20} style={{ color: previewColor }} />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-xs sm:text-sm font-medium leading-none">
+                <p className="truncate text-xs sm:text-13 font-medium leading-none">
                   {watchedName || "Category name"}
                 </p>
-                <p className="mt-1 text-1.5xs sm:text-xs capitalize text-muted-foreground">
+                <p className="mt-1 text-11 sm:text-xs capitalize text-muted-foreground">
                   {watchedType}
                 </p>
               </div>
@@ -235,56 +208,92 @@ export function CategoryDialog({
 
             {/* ── Name ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="cat-name" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="cat-name" className="text-xs sm:text-13">
                 Name
               </FieldLabel>
               <Input
                 id="cat-name"
                 placeholder="e.g. Groceries"
                 disabled={isLoading}
-                className="text-xs sm:text-sm"
+                className="text-xs sm:text-13"
                 {...register("name")}
               />
               {errors.name && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.name.message}
                 </FieldDescription>
               )}
             </Field>
 
-            {/* ── Icon ─────────────────────────────────────────────── */}
-            <Field>
-              <FieldLabel className="text-xs sm:text-sm">Icon</FieldLabel>
-              <Input
-                placeholder="Paste or type an emoji"
-                disabled={isLoading}
-                value={watchedIcon}
-                onChange={(e) =>
-                  setValue("icon", e.target.value, { shouldValidate: true })
-                }
-                className="w-24 sm:w-28 text-center text-sm sm:text-base"
-              />
-              <div className="flex flex-wrap gap-1 sm:gap-1.5 pt-1">
-                {iconPresets.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
+            {/* ── Monthly Budget (expense only) ─────────────────────── */}
+            {watchedType === "expense" && (
+              <Field>
+                <FieldLabel htmlFor="cat-budget" className="text-xs sm:text-13">
+                  Monthly Budget
+                  <span className="ml-1.5 text-muted-foreground font-normal">(optional)</span>
+                </FieldLabel>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-13 text-muted-foreground">
+                    ₹
+                  </span>
+                  <Input
+                    id="cat-budget"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
                     disabled={isLoading}
-                    onClick={() =>
-                      setValue("icon", emoji, { shouldValidate: true })
-                    }
-                    className={`flex size-7 sm:size-8 items-center justify-center rounded-md text-sm sm:text-base transition-colors hover:bg-muted disabled:pointer-events-none ${
-                      watchedIcon === emoji
-                        ? "bg-muted ring-2 ring-primary ring-offset-1"
-                        : ""
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
+                    className="pl-7!"
+                    {...register("monthly_budget", {
+                      setValueAs: (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+                    })}
+                  />
+                </div>
+                <FieldDescription className="text-xs sm:text-13">
+                  Set a spending limit to track your progress each month.
+                </FieldDescription>
+                {errors.monthly_budget && (
+                  <FieldDescription className="text-destructive text-xs sm:text-13">
+                    {errors.monthly_budget.message}
+                  </FieldDescription>
+                )}
+              </Field>
+            )}
+
+            {/* ── Icon picker ────────────────────────────────────── */}
+            <Field>
+              <FieldLabel className="text-xs sm:text-13">Icon</FieldLabel>
+              <div className="grid grid-cols-8 gap-0.5 pt-1">
+                {iconPresets.map((iconName) => {
+                  const isSelected = watchedIcon === iconName;
+                  return (
+                    <button
+                      key={iconName}
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => setValue("icon", iconName, { shouldValidate: true })}
+                      className={`flex size-8 sm:size-9 items-center justify-center rounded-lg transition-colors disabled:pointer-events-none focus:outline-none ${
+                        isSelected ? "" : "hover:bg-muted"
+                      }`}
+                      style={
+                        isSelected
+                          ? { background: previewIconBg, color: previewColor }
+                          : undefined
+                      }
+                      title={iconName}
+                    >
+                      <CategoryIcon
+                        icon={iconName}
+                        size={16}
+                        style={isSelected ? { color: previewColor } : undefined}
+                        className={isSelected ? undefined : "text-muted-foreground"}
+                      />
+                    </button>
+                  );
+                })}
               </div>
               {errors.icon && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.icon.message}
                 </FieldDescription>
               )}
@@ -292,22 +301,20 @@ export function CategoryDialog({
 
             {/* ── Color ────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Color</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Color</FieldLabel>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-1">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color}
                     type="button"
                     disabled={isLoading}
-                    onClick={() =>
-                      setValue("color", color, { shouldValidate: true })
-                    }
+                    onClick={() => setValue("color", color, { shouldValidate: true })}
                     aria-label={color}
                     className="size-6 sm:size-7 rounded-full transition-transform hover:scale-110 focus:outline-none disabled:pointer-events-none"
                     style={{ backgroundColor: color }}
                   >
                     {watchedColor === color && (
-                      <span className="flex items-center justify-center text-1.5xs font-bold text-white">
+                      <span className="flex items-center justify-center text-11 font-bold text-white">
                         ✓
                       </span>
                     )}
@@ -315,16 +322,16 @@ export function CategoryDialog({
                 ))}
               </div>
               {errors.color && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.color.message}
                 </FieldDescription>
               )}
             </Field>
+
           </div>
 
-          {/* ── Footer — always visible ─────────────────────────────────── */}
+          {/* ── Footer ─────────────────────────────────────────────────── */}
           <div className="flex flex-col gap-2 border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
-            {/* Delete row — only in edit mode */}
             {isEditing && (
               <div className="flex w-full items-center gap-2">
                 {!confirmDelete ? (
@@ -333,7 +340,7 @@ export function CategoryDialog({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full text-xs sm:text-sm"
+                    className="w-full text-xs sm:text-13"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete category
@@ -347,7 +354,7 @@ export function CategoryDialog({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -357,7 +364,7 @@ export function CategoryDialog({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -371,13 +378,12 @@ export function CategoryDialog({
               </div>
             )}
 
-            {/* Save row */}
             <div className="flex w-full gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
@@ -386,7 +392,7 @@ export function CategoryDialog({
               <Button
                 type="submit"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
               >
                 <span className="flex items-center justify-center gap-1.5">

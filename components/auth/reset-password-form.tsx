@@ -8,6 +8,7 @@ import { Lock01 } from "@untitledui/icons";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TypographyH1 } from "@/components/ui/typography";
 import {
   Field,
   FieldDescription,
@@ -64,7 +65,7 @@ export function ResetPasswordForm({
             <Lock01 className="size-6 text-primary" />
           </div>
           <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-2xl font-bold">Set new password</h1>
+            <TypographyH1>Set new password</TypographyH1>
             <p className="text-muted-foreground text-sm text-balance">
               Your new password must be different from the previously used
               passwords.

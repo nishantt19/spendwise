@@ -38,7 +38,12 @@ function CustomTooltip({
   label,
 }: {
   active?: boolean;
-  payload?: Array<{ dataKey: string; value: number; color: string; name: string }>;
+  payload?: Array<{
+    dataKey: string;
+    value: number;
+    color: string;
+    name: string;
+  }>;
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
@@ -74,7 +79,7 @@ export function TrendChart({ data }: TrendChartProps) {
   if (!hasData) {
     return (
       <div className="flex h-[220px] items-center justify-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-13 text-muted-foreground">
           No data yet — add expenses or income to see your trend.
         </p>
       </div>
@@ -86,31 +91,35 @@ export function TrendChart({ data }: TrendChartProps) {
       <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#10b981" stopOpacity={0.18} />
-            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.22} />
+            <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="expensesGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
-            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+            <stop
+              offset="5%"
+              stopColor="var(--destructive)"
+              stopOpacity={0.18}
+            />
+            <stop offset="95%" stopColor="var(--destructive)" stopOpacity={0} />
           </linearGradient>
         </defs>
 
         <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(128,128,128,0.15)"
+          strokeDasharray="3 4"
+          stroke="var(--grid-line)"
           vertical={false}
         />
 
         <XAxis
           dataKey="month"
-          tick={{ fontSize: 11, fill: "currentColor", opacity: 0.6 }}
+          tick={{ fontSize: 10.5, fill: "var(--muted-foreground)" }}
           axisLine={false}
           tickLine={false}
           dy={6}
         />
 
         <YAxis
-          tick={{ fontSize: 11, fill: "currentColor", opacity: 0.6 }}
+          tick={{ fontSize: 10.5, fill: "var(--muted-foreground)" }}
           axisLine={false}
           tickLine={false}
           tickFormatter={fmtYAxis}
@@ -118,18 +127,35 @@ export function TrendChart({ data }: TrendChartProps) {
           tickCount={5}
         />
 
-        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(128,128,128,0.2)", strokeWidth: 1 }} />
+        <Tooltip
+          content={<CustomTooltip />}
+          cursor={{
+            stroke: "var(--border-strong)",
+            strokeWidth: 1,
+            strokeDasharray: "2 3",
+          }}
+        />
 
         {/* Income — rendered first (behind) */}
         <Area
           type="monotone"
           dataKey="income"
           name="Income"
-          stroke="#10b981"
+          stroke="var(--chart-2)"
           strokeWidth={2}
           fill="url(#incomeGrad)"
-          dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
+          dot={{
+            r: 2.5,
+            fill: "var(--card)",
+            stroke: "var(--chart-2)",
+            strokeWidth: 1.5,
+          }}
+          activeDot={{
+            r: 4,
+            fill: "var(--card)",
+            stroke: "var(--chart-2)",
+            strokeWidth: 2.5,
+          }}
         />
 
         {/* Expenses — rendered on top */}
@@ -137,11 +163,21 @@ export function TrendChart({ data }: TrendChartProps) {
           type="monotone"
           dataKey="expenses"
           name="Expenses"
-          stroke="#ef4444"
+          stroke="var(--destructive)"
           strokeWidth={2}
           fill="url(#expensesGrad)"
-          dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
+          dot={{
+            r: 2.5,
+            fill: "var(--card)",
+            stroke: "var(--destructive)",
+            strokeWidth: 1.5,
+          }}
+          activeDot={{
+            r: 4,
+            fill: "var(--card)",
+            stroke: "var(--destructive)",
+            strokeWidth: 2.5,
+          }}
         />
       </AreaChart>
     </ResponsiveContainer>

@@ -46,7 +46,9 @@ export async function getTransactions(
   if (filters.category_id) {
     query = query.eq("category_id", filters.category_id);
   }
-  if (filters.payment_method) {
+  if (filters.payment_methods && filters.payment_methods.length > 0) {
+    query = query.in("payment_method", filters.payment_methods);
+  } else if (filters.payment_method) {
     query = query.eq("payment_method", filters.payment_method);
   }
   if (filters.date_from) {
@@ -71,6 +73,59 @@ export async function getTransactions(
   };
 }
 
+// ─── Monthly expense total (lightweight, for delta badge) ─────────────────────
+
+export async function getMonthlyExpenseTotal(
+  month: number,
+  year: number,
+): Promise<{ total: number; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { total: 0, error: "Unauthorized" };
+
+  const mm = String(month).padStart(2, "0");
+  const lastDay = new Date(year, month, 0).getDate();
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("amount")
+    .eq("user_id", user.id)
+    .eq("type", "expense")
+    .eq("is_deleted", false)
+    .gte("date", `${year}-${mm}-01`)
+    .lte("date", `${year}-${mm}-${String(lastDay).padStart(2, "0")}`);
+
+  if (error) return { total: 0, error: error.message };
+  const total = (data ?? []).reduce((s, r) => s + r.amount, 0);
+  return { total, error: null };
+}
+
+// ─── Monthly income total (for daily spend baseline) ──────────────────────────
+
+export async function getMonthlyIncomeTotal(
+  month: number,
+  year: number,
+): Promise<{ total: number; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { total: 0, error: "Unauthorized" };
+
+  const { data, error } = await supabase
+    .from("income_sources")
+    .select("amount")
+    .eq("user_id", user.id)
+    .eq("month", month)
+    .eq("year", year);
+
+  if (error) return { total: 0, error: error.message };
+  const total = (data ?? []).reduce((s, r) => s + r.amount, 0);
+  return { total, error: null };
+}
+
 // ─── Create ───────────────────────────────────────────────────────────────────
 
 export async function createTransaction(
@@ -89,6 +144,16 @@ export async function createTransaction(
   }
 
   const { note, category_id, ...rest } = parsed.data;
+
+  if (category_id) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", category_id)
+      .eq("user_id", user.id)
+      .single();
+    if (!cat) return { status: "error", message: "Invalid category." };
+  }
 
   const { data, error } = await supabase
     .from("transactions")
@@ -132,6 +197,16 @@ export async function updateTransaction(
   }
 
   const { note, category_id, ...rest } = parsed.data;
+
+  if (category_id) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", category_id)
+      .eq("user_id", user.id)
+      .single();
+    if (!cat) return { status: "error", message: "Invalid category." };
+  }
 
   const { data, error } = await supabase
     .from("transactions")

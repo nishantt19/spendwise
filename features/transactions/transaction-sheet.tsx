@@ -142,7 +142,7 @@ export function TransactionSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* Mobile: 95vw wide. sm+: standard max-w-md */}
       <SheetContent
-        className="flex flex-col gap-0 p-0 w-[95vw] sm:max-w-md"
+        className="flex flex-col gap-0 p-0 w-full sm:max-w-md"
         side="right"
       >
         {/* ── Header ─────────────────────────────────────────────────── */}
@@ -150,7 +150,7 @@ export function TransactionSheet({
           <SheetTitle className="text-base sm:text-lg">
             {isEditing ? "Edit expense" : "New expense"}
           </SheetTitle>
-          <SheetDescription className="text-xs sm:text-sm">
+          <SheetDescription className="text-xs sm:text-13">
             {isEditing
               ? "Update the details of this expense."
               : "Record a new expense."}
@@ -166,11 +166,11 @@ export function TransactionSheet({
           <div className="flex flex-col gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
             {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-amount" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="tx-amount" className="text-xs sm:text-13">
                 Amount
               </FieldLabel>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-muted-foreground">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-11 sm:text-xs text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -180,12 +180,12 @@ export function TransactionSheet({
                   min="0"
                   placeholder="0.00"
                   disabled={isLoading}
-                  className="pl-7 text-xs sm:text-sm"
+                  className="pl-7!"
                   {...register("amount", { valueAsNumber: true })}
                 />
               </div>
               {errors.amount && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.amount.message}
                 </FieldDescription>
               )}
@@ -193,18 +193,18 @@ export function TransactionSheet({
 
             {/* ── Description ──────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-desc" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="tx-desc" className="text-xs sm:text-13">
                 Description
               </FieldLabel>
               <Input
                 id="tx-desc"
                 placeholder="e.g. Lunch at restaurant"
                 disabled={isLoading}
-                className="text-xs sm:text-sm"
+                className="text-xs sm:text-13"
                 {...register("description")}
               />
               {errors.description && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.description.message}
                 </FieldDescription>
               )}
@@ -212,13 +212,13 @@ export function TransactionSheet({
 
             {/* ── Category ─────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Category</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Category</FieldLabel>
               <Select
                 value={watchCategory ?? ""}
                 onValueChange={(val) => setValue("category_id", val || null)}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full text-xs sm:text-sm">
+                <SelectTrigger className="w-full text-xs sm:text-13">
                   <SelectValue placeholder="Select a category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -242,7 +242,7 @@ export function TransactionSheet({
 
             {/* ── Date ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">Date</FieldLabel>
+              <FieldLabel className="text-xs sm:text-13">Date</FieldLabel>
               <DatePicker
                 value={watchDate}
                 onChange={(v) => setValue("date", v, { shouldValidate: true })}
@@ -250,7 +250,7 @@ export function TransactionSheet({
                 disabled={isLoading}
               />
               {errors.date && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.date.message}
                 </FieldDescription>
               )}
@@ -258,7 +258,7 @@ export function TransactionSheet({
 
             {/* ── Payment method ────────────────────────────────────── */}
             <Field>
-              <FieldLabel className="text-xs sm:text-sm">
+              <FieldLabel className="text-xs sm:text-13">
                 Payment method
               </FieldLabel>
               <Select
@@ -271,7 +271,7 @@ export function TransactionSheet({
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full text-xs sm:text-sm">
+                <SelectTrigger className="w-full text-xs sm:text-13">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -283,7 +283,7 @@ export function TransactionSheet({
                 </SelectContent>
               </Select>
               {errors.payment_method && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.payment_method.message}
                 </FieldDescription>
               )}
@@ -291,7 +291,7 @@ export function TransactionSheet({
 
             {/* ── Note ─────────────────────────────────────────────── */}
             <Field>
-              <FieldLabel htmlFor="tx-note" className="text-xs sm:text-sm">
+              <FieldLabel htmlFor="tx-note" className="text-xs sm:text-13">
                 Note{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -302,11 +302,11 @@ export function TransactionSheet({
                 placeholder="Any extra details..."
                 rows={3}
                 disabled={isLoading}
-                className="resize-none text-xs sm:text-sm"
+                className="resize-none text-xs sm:text-13"
                 {...register("note")}
               />
               {errors.note && (
-                <FieldDescription className="text-destructive text-xs sm:text-sm">
+                <FieldDescription className="text-destructive text-xs sm:text-13">
                   {errors.note.message}
                 </FieldDescription>
               )}
@@ -324,7 +324,7 @@ export function TransactionSheet({
                     variant="destructive"
                     size="sm"
                     disabled={isLoading}
-                    className="w-full text-xs sm:text-sm"
+                    className="w-full text-xs sm:text-13"
                     onClick={() => setConfirmDelete(true)}
                   >
                     Delete expense
@@ -338,7 +338,7 @@ export function TransactionSheet({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={() => setConfirmDelete(false)}
                     >
@@ -348,7 +348,7 @@ export function TransactionSheet({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="text-xs sm:text-sm"
+                      className="text-xs sm:text-13"
                       disabled={isLoading}
                       onClick={onDelete}
                     >
@@ -368,7 +368,7 @@ export function TransactionSheet({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
                 onClick={() => onOpenChange(false)}
               >
@@ -377,7 +377,7 @@ export function TransactionSheet({
               <Button
                 type="submit"
                 size="sm"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-13"
                 disabled={isLoading}
               >
                 <span className="flex items-center justify-center gap-1.5">

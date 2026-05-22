@@ -42,6 +42,31 @@ export function formatDateHeader(dateStr: string): string {
 }
 
 /**
+ * Formats a "YYYY-MM-DD" date string into a day-group label that always
+ * includes the short date, e.g.:
+ *   today      → "Today · 22 May"
+ *   yesterday  → "Yesterday · 21 May"
+ *   other      → "Wed · 21 May"
+ */
+export function formatDayLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const today = new Date(`${todayISO()}T00:00:00`);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const dateLabel = d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+
+  if (d.getTime() === today.getTime()) return `Today · ${dateLabel}`;
+  if (d.getTime() === yesterday.getTime()) return `Yesterday · ${dateLabel}`;
+
+  const weekday = d.toLocaleDateString("en-IN", { weekday: "short" });
+  return `${weekday} · ${dateLabel}`;
+}
+
+/**
  * Formats a "YYYY-MM-DD" string to a short display date.
  * e.g. "22 Feb"
  */
