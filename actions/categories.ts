@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { auditLog } from "@/lib/audit";
 import { categorySchema } from "@/schema/categories";
 import type {
   Category,
@@ -122,6 +123,14 @@ export async function createCategory(
     return { status: "error", message: error.message };
   }
 
+  auditLog({
+    action: "create",
+    entity: "category",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { name: data.name, type: data.type },
+  });
+
   revalidatePath("/categories");
   return {
     status: "success",
@@ -163,6 +172,14 @@ export async function updateCategory(
     }
     return { status: "error", message: error.message };
   }
+
+  auditLog({
+    action: "update",
+    entity: "category",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { name: data.name, type: data.type },
+  });
 
   revalidatePath("/categories");
   return {
@@ -206,6 +223,13 @@ export async function deleteCategory(
     .eq("user_id", user.id);
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "delete",
+    entity: "category",
+    entity_id: id,
+    user_id: user.id,
+  });
 
   revalidatePath("/categories");
   return { status: "success", message: "Category deleted." };

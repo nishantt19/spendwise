@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { auditLog } from "@/lib/audit";
 import { recurringSchema } from "@/schema/recurring";
 import type {
   RecurringActionResult,
@@ -70,9 +71,9 @@ export async function createRecurringExpense(
     .from("recurring_expenses")
     .insert({
       ...rest,
-      description: description || null,
-      category_id: category_id || null,
-      end_date: end_date || null,
+      description: description ?? null,
+      category_id: category_id ?? null,
+      end_date: end_date ?? null,
       // next_due_date starts at start_date; DB trigger advances it after each run
       next_due_date: parsed.data.start_date,
       user_id: user.id,
@@ -81,6 +82,14 @@ export async function createRecurringExpense(
     .single();
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "create",
+    entity: "recurring_expense",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { amount: data.amount, name: data.name, frequency: data.frequency },
+  });
 
   revalidatePath("/recurring");
   revalidatePath("/");
@@ -125,9 +134,9 @@ export async function updateRecurringExpense(
     .from("recurring_expenses")
     .update({
       ...rest,
-      description: description || null,
-      category_id: category_id || null,
-      end_date: end_date || null,
+      description: description ?? null,
+      category_id: category_id ?? null,
+      end_date: end_date ?? null,
     })
     .eq("id", id)
     .eq("user_id", user.id)
@@ -135,6 +144,14 @@ export async function updateRecurringExpense(
     .single();
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "update",
+    entity: "recurring_expense",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { amount: data.amount, name: data.name, frequency: data.frequency },
+  });
 
   revalidatePath("/recurring");
   revalidatePath("/");
@@ -167,6 +184,14 @@ export async function toggleRecurringActive(
     .single();
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "toggle",
+    entity: "recurring_expense",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { is_active: isActive },
+  });
 
   revalidatePath("/recurring");
   revalidatePath("/");
@@ -226,6 +251,14 @@ export async function addRecurringToExpense(
     .eq("id", id)
     .eq("user_id", user.id);
 
+  auditLog({
+    action: "create",
+    entity: "transaction",
+    entity_id: id,
+    user_id: user.id,
+    details: { source: "recurring", name: expense.name, amount: expense.amount },
+  });
+
   revalidatePath("/recurring");
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
@@ -268,6 +301,13 @@ export async function deleteRecurringExpense(
     .eq("user_id", user.id);
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "delete",
+    entity: "recurring_expense",
+    entity_id: id,
+    user_id: user.id,
+  });
 
   revalidatePath("/recurring");
   revalidatePath("/");

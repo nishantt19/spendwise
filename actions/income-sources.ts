@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { auditLog } from "@/lib/audit";
 import { incomeSourceSchema } from "@/schema/income-sources";
 import type {
   IncomeSource,
@@ -57,11 +58,19 @@ export async function createIncomeSource(
 
   const { data, error } = await supabase
     .from("income_sources")
-    .insert({ ...rest, note: note || null, user_id: user.id })
+    .insert({ ...rest, note: note ?? null, user_id: user.id })
     .select()
     .single();
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "create",
+    entity: "income_source",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { amount: data.amount, name: data.name },
+  });
 
   revalidatePath("/income");
   revalidatePath("/");
@@ -94,13 +103,21 @@ export async function updateIncomeSource(
 
   const { data, error } = await supabase
     .from("income_sources")
-    .update({ ...rest, note: note || null })
+    .update({ ...rest, note: note ?? null })
     .eq("id", id)
     .eq("user_id", user.id)
     .select()
     .single();
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "update",
+    entity: "income_source",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { amount: data.amount, name: data.name },
+  });
 
   revalidatePath("/income");
   revalidatePath("/");
@@ -134,6 +151,14 @@ export async function toggleIncomeReceived(
 
   if (error) return { status: "error", message: error.message };
 
+  auditLog({
+    action: "toggle",
+    entity: "income_source",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { is_received: isReceived },
+  });
+
   revalidatePath("/income");
   revalidatePath("/");
   return {
@@ -162,6 +187,13 @@ export async function deleteIncomeSource(
     .eq("user_id", user.id);
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "delete",
+    entity: "income_source",
+    entity_id: id,
+    user_id: user.id,
+  });
 
   revalidatePath("/income");
   revalidatePath("/");

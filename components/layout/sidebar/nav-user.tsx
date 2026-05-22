@@ -3,8 +3,8 @@
 import { ChevronSelectorVertical, LogOut01, Moon01, Sun } from "@untitledui/icons";
 import { useTheme } from "next-themes";
 
-import { getInitials } from "@/utils/util";
-import { useLogoutMutation } from "@/queries/auth/mutations";
+import { getInitials } from "@/lib/utils";
+import { useLogout } from "@/hooks/use-logout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -33,7 +33,7 @@ interface NavUserProps {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
   const initials = getInitials(user.name);
-  const { mutate: logout, isPending } = useLogoutMutation();
+  const { logout, isPending } = useLogout();
   const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");

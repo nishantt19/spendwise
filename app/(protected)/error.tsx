@@ -12,7 +12,10 @@ export default function ProtectedError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    // Only log to console in development — avoids leaking stack traces in prod
+    if (process.env.NODE_ENV === "development") {
+      console.error(error);
+    }
   }, [error]);
 
   return (

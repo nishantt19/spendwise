@@ -19,6 +19,7 @@ import {
 } from "@untitledui/icons";
 
 import { Button } from "@/components/ui/button";
+import { Sparkline } from "@/components/ui/sparkline";
 import { Spinner } from "@/components/ui/spinner";
 import { TypographyH2 } from "@/components/ui/typography";
 
@@ -27,7 +28,7 @@ import {
   getMonthlyExpenseTotal,
 
 } from "@/actions/transactions";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatAmount } from "@/lib/format";
 import { MONTH_LABELS } from "@/schema/income-sources";
 import {
   TransactionsFilters,
@@ -44,58 +45,13 @@ import type {
 } from "@/types/transactions";
 import { cn } from "@/lib/utils";
 
-// ─── Sparkline ────────────────────────────────────────────────────────────────
-
-function Sparkline({
-  data,
-  stroke = "var(--primary)",
-  fill = "var(--primary-soft)",
-  width = 120,
-  height = 28,
-}: {
-  data: number[];
-  stroke?: string;
-  fill?: string;
-  width?: number;
-  height?: number;
-}) {
-  if (data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const span = max - min || 1;
-  const stepX = width / (data.length - 1);
-  const pts = data.map((v, i) => [
-    i * stepX,
-    height - ((v - min) / span) * (height - 4) - 2,
-  ]);
-  const line = pts
-    .map(
-      (p, i) => `${i === 0 ? "M" : "L"} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`,
-    )
-    .join(" ");
-  const area = `${line} L ${width} ${height} L 0 ${height} Z`;
-  const last = pts[pts.length - 1];
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      style={{ width: "100%", height, display: "block" }}
-    >
-      <path d={area} fill={fill} stroke="none" />
-      <path
-        d={line}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx={last[0]} cy={last[1]} r="2" fill={stroke} />
-    </svg>
-  );
-}
-
 // ─── Daily spend bar chart ────────────────────────────────────────────────────
+
+// ─── DailySpendChart constants ────────────────────────────────────────────────
+const DAILY_CHART_SLOT_W = 30;  // px width allocated per day column
+const DAILY_CHART_H = 70;       // total SVG height in px
+const DAILY_CHART_BAR_MAX = 60; // max bar height (leaves 10px padding above)
+const DAILY_LARGE_SPEND_THRESHOLD = 10_000; // INR — triggers warning colour
 
 function DailySpendChart({
   data,
@@ -110,9 +66,9 @@ function DailySpendChart({
   const isCurrentMonth =
     today.getMonth() + 1 === month && today.getFullYear() === year;
   const todayDay = today.getDate();
-  const slotW = 30;
-  const chartH = 70;
-  const barMax = 60;
+  const slotW = DAILY_CHART_SLOT_W;
+  const chartH = DAILY_CHART_H;
+  const barMax = DAILY_CHART_BAR_MAX;
 
   return (
     <svg
@@ -127,7 +83,7 @@ function DailySpendChart({
         const x = i * slotW + 2;
         const isFuture = isCurrentMonth && day > todayDay;
         const isEmpty = v === 0 || isFuture;
-        const isLarge = v >= 10000;
+        const isLarge = v >= DAILY_LARGE_SPEND_THRESHOLD;
         return (
           <g key={i}>
             {/* Ghost line — no spend or future day */}
@@ -173,6 +129,11 @@ function DailySpendChart({
   );
 }
 
+// ─── MiniBarChart constants ───────────────────────────────────────────────────
+const MINI_BAR_H = 24;   // SVG height in px
+const MINI_BAR_W = 3;    // bar width in px
+const MINI_BAR_GAP = 1;  // gap between bars in px
+
 // ─── Mini bar chart (compact, top-right of daily avg card) ───────────────────
 
 function MiniBarChart({
@@ -184,9 +145,9 @@ function MiniBarChart({
 }) {
   if (data.length === 0) return null;
   const max = Math.max(...data, 1);
-  const h = 24;
-  const barW = 3;
-  const gap = 1;
+  const h = MINI_BAR_H;
+  const barW = MINI_BAR_W;
+  const gap = MINI_BAR_GAP;
   const w = data.length * (barW + gap) - gap;
   return (
     <svg
@@ -533,7 +494,7 @@ export function TransactionsContent({
                   ₹
                 </span>
                 <span className="text-2xl font-semibold">
-                  {Math.round(monthlyAmount).toLocaleString("en-IN")}
+                  {formatAmount(monthlyAmount)}
                 </span>
               </p>
               <div className="mt-auto flex items-center gap-1.5 flex-wrap">
@@ -555,7 +516,7 @@ export function TransactionsContent({
                       {Math.abs(delta).toFixed(1)}%
                     </span>
                     <span className="text-10 text-muted-foreground">
-                      vs ₹{Math.round(prevMonthTotal).toLocaleString("en-IN")}{" "}
+                      vs ₹{formatAmount(prevMonthTotal)}{" "}
                       in {prevMonthName}
                     </span>
                   </>
@@ -586,12 +547,12 @@ export function TransactionsContent({
                   ₹
                 </span>
                 <span className="text-2xl font-semibold">
-                  {Math.round(dailyAvg).toLocaleString("en-IN")}
+                  {formatAmount(dailyAvg)}
                 </span>
               </p>
               <span className="mt-auto text-10 sm:text-11 text-muted-foreground">
                 {highestDayAmount > 0 && highestDayLabel
-                  ? `₹${Math.round(highestDayAmount).toLocaleString("en-IN")} · ${highestDayLabel}`
+                  ? `₹${formatAmount(highestDayAmount)} · ${highestDayLabel}`
                   : `${daysInMonth} days`}
               </span>
             </div>
@@ -610,7 +571,7 @@ export function TransactionsContent({
                     ₹
                   </span>
                   <span className="text-2xl font-semibold">
-                    {Math.round(topCategory.amount).toLocaleString("en-IN")}
+                    {formatAmount(topCategory.amount)}
                   </span>
                 </p>
               ) : (
@@ -640,7 +601,7 @@ export function TransactionsContent({
                 </span>
                 <span className="text-2xl font-semibold">
                   {largestTx
-                    ? Math.round(largestTx.amount).toLocaleString("en-IN")
+                    ? formatAmount(largestTx.amount)
                     : "—"}
                 </span>
               </p>
@@ -674,7 +635,7 @@ export function TransactionsContent({
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-2 rounded-sm inline-block bg-warning/85" />
-                  Large (≥₹10K)
+                  Large (≥₹{DAILY_LARGE_SPEND_THRESHOLD / 1000}K)
                 </span>
               </div>
             </div>

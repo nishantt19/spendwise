@@ -20,6 +20,7 @@ import {
 import {
   formatCurrency,
   formatNextDueDate,
+  APP_LOCALE,
   type DueDateStatus,
 } from "@/lib/format";
 import { CategoryIcon } from "@/lib/category-icons";
@@ -418,7 +419,7 @@ function RecurringTimeline({
           { p: 0.25, l: "−15d" },
           {
             p: 0.5,
-            l: `Today · ${today.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
+            l: `Today · ${today.toLocaleDateString(APP_LOCALE, { day: "numeric", month: "short" })}`,
           },
           { p: 0.75, l: "+15d" },
           { p: 1, l: "+30d" },
@@ -767,7 +768,7 @@ function RecurringRow({
             <TooltipContent side="top">
               {isDue
                 ? "Add to expenses"
-                : `Due ${new Date(`${expense.next_due_date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                : `Due ${new Date(`${expense.next_due_date}T00:00:00`).toLocaleDateString(APP_LOCALE, { day: "numeric", month: "short" })}`}
             </TooltipContent>
           </Tooltip>
 

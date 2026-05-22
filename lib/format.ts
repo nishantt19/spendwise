@@ -3,14 +3,34 @@
  * All functions are pure — safe to call in both server and client components.
  */
 
+// ─── Locale / timezone constants ──────────────────────────────────────────────
+
+/** BCP-47 locale tag used throughout the app (Indian English). */
+export const APP_LOCALE = "en-IN";
+
+/** IANA timezone used for date-boundary calculations. */
+export const APP_TIMEZONE = "Asia/Kolkata";
+
 // ─── Currency ─────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount: number, currency = "INR"): string {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat(APP_LOCALE, {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
+ * Formats a number as a plain integer string in the app locale (no currency symbol).
+ * Use this for "split symbol" displays where ₹ is rendered separately in a smaller font.
+ * e.g. 38420 → "38,420"
+ */
+export function formatAmount(amount: number): string {
+  return new Intl.NumberFormat(APP_LOCALE, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -33,7 +53,7 @@ export function formatDateHeader(dateStr: string): string {
 
   const isSameYear = date.getFullYear() === today.getFullYear();
 
-  return date.toLocaleDateString("en-IN", {
+  return date.toLocaleDateString(APP_LOCALE, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -54,7 +74,7 @@ export function formatDayLabel(dateStr: string): string {
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  const dateLabel = d.toLocaleDateString("en-IN", {
+  const dateLabel = d.toLocaleDateString(APP_LOCALE, {
     day: "numeric",
     month: "short",
   });
@@ -62,7 +82,7 @@ export function formatDayLabel(dateStr: string): string {
   if (d.getTime() === today.getTime()) return `Today · ${dateLabel}`;
   if (d.getTime() === yesterday.getTime()) return `Yesterday · ${dateLabel}`;
 
-  const weekday = d.toLocaleDateString("en-IN", { weekday: "short" });
+  const weekday = d.toLocaleDateString(APP_LOCALE, { weekday: "short" });
   return `${weekday} · ${dateLabel}`;
 }
 
@@ -71,7 +91,7 @@ export function formatDayLabel(dateStr: string): string {
  * e.g. "22 Feb"
  */
 export function formatDateShort(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-IN", {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(APP_LOCALE, {
     day: "numeric",
     month: "short",
   });
@@ -82,7 +102,7 @@ export function formatDateShort(dateStr: string): string {
  */
 export function todayISO(): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
+    timeZone: APP_TIMEZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -120,7 +140,7 @@ export function formatNextDueDate(dateStr: string): {
   if (diffDays <= 7) return { label: `Due in ${diffDays} days`, status: "soon" };
 
   return {
-    label: date.toLocaleDateString("en-IN", {
+    label: date.toLocaleDateString(APP_LOCALE, {
       day: "numeric",
       month: "short",
       year: "numeric",

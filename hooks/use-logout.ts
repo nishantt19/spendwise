@@ -5,10 +5,10 @@ import { toast } from "sonner";
 
 import { signOut } from "@/actions/auth";
 
-export function useLogoutMutation() {
+export function useLogout() {
   const [isPending, startTransition] = useTransition();
 
-  const mutate = () => {
+  const logout = () => {
     startTransition(async () => {
       const result = await signOut();
       if (result?.status === "error") {
@@ -17,5 +17,5 @@ export function useLogoutMutation() {
     });
   };
 
-  return { mutate, isPending };
+  return { logout, isPending };
 }

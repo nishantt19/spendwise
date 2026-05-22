@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import { formatCurrency } from "@/lib/format";
 import { CategoryIcon } from "@/lib/category-icons";
-import type { CategoryStat } from "@/actions/dashboard";
+import type { CategoryBreakdownStat } from "@/actions/dashboard";
 
 // ─── Custom tooltip ───────────────────────────────────────────────────────────
 
@@ -14,7 +14,7 @@ function CustomTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: Array<{ payload: CategoryStat & { percentage: number } }>;
+  payload?: Array<{ payload: CategoryBreakdownStat & { percentage: number } }>;
 }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
@@ -68,7 +68,7 @@ function useChartColors() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type CategoryChartProps = {
-  data: CategoryStat[];
+  data: CategoryBreakdownStat[];
   total: number;
   month?: string;
 };

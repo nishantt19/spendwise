@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import { APP_LOCALE } from "@/lib/format";
 import type { TrendPoint } from "@/actions/dashboard";
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
@@ -22,7 +23,7 @@ function fmtYAxis(value: number): string {
 }
 
 function fmtTooltip(value: number): string {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat(APP_LOCALE, {
     style: "currency",
     currency: "INR",
     minimumFractionDigits: 0,

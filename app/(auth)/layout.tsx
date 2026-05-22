@@ -1,9 +1,18 @@
 import { CreditCard02 } from "@untitledui/icons";
 import { AuthThemeToggle } from "@/components/auth/auth-theme-toggle";
+import { APP_LOCALE } from "@/lib/format";
+
+const COPYRIGHT = `© ${new Date().getFullYear()} SpendWise. All rights reserved.`;
 
 export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Computed inside the function body so it's fresh on every server render,
+  // not frozen at module-load time.
+  const previewMonthLabel = new Date().toLocaleDateString(APP_LOCALE, {
+    month: "long",
+    year: "numeric",
+  });
   return (
     <div className="grid min-h-svh lg:grid-cols-2 bg-background text-foreground font-sans">
       {/* ── Left brand panel ─────────────────────────────────────────── */}
@@ -131,6 +140,7 @@ export default function AuthLayout({
             clean dashboard built for clarity.
           </p>
 
+          {/* DECORATIVE: static preview data — not real user data */}
           {/* Floating preview stack */}
           <div
             className="relative"
@@ -259,7 +269,7 @@ export default function AuthLayout({
                 className="text-muted-foreground"
                 style={{ fontSize: 11 }}
               >
-                This month · May 2026
+                This month · {previewMonthLabel}
               </div>
               <div
                 className="flex items-baseline gap-1.5 font-semibold"
@@ -378,7 +388,7 @@ export default function AuthLayout({
 
         {/* Footer */}
         <p className="text-muted-foreground" style={{ fontSize: 12 }}>
-          © {new Date().getFullYear()} SpendWise. All rights reserved.
+          {COPYRIGHT}
         </p>
       </div>
 
@@ -415,7 +425,7 @@ export default function AuthLayout({
         {/* Bottom copyright */}
         <div className="pb-6 text-center">
           <p className="text-muted-foreground/50" style={{ fontSize: 12 }}>
-            © {new Date().getFullYear()} SpendWise. All rights reserved.
+            {COPYRIGHT}
           </p>
         </div>
       </div>

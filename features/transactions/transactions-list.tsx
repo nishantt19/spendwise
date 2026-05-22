@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { PAYMENT_METHOD_LABELS } from "@/schema/transactions";
 import { formatCurrency, formatDayLabel } from "@/lib/format";
+import { groupByDate } from "@/lib/group-by-date";
 import { softDeleteTransaction } from "@/actions/transactions";
 import { CategoryIcon } from "@/lib/category-icons";
 import { getCategoryColor, getCategoryBg } from "@/lib/category-color";
@@ -80,7 +81,6 @@ export function TransactionsList({
         <MobileGroupedList
           transactions={transactions}
           onCardClick={onRowClick}
-          onDeleteSuccess={onDelete}
         />
       </div>
 
@@ -154,22 +154,11 @@ function MobileTabBadges({
 function MobileGroupedList({
   transactions,
   onCardClick,
-  onDeleteSuccess,
 }: {
   transactions: TransactionWithCategory[];
   onCardClick: (tx: TransactionWithCategory) => void;
-  onDeleteSuccess: () => void;
 }) {
-  const groups: { date: string; items: TransactionWithCategory[] }[] = [];
-  const dateMap = new Map<string, TransactionWithCategory[]>();
-  for (const tx of transactions) {
-    if (!dateMap.has(tx.date)) {
-      const arr: TransactionWithCategory[] = [];
-      dateMap.set(tx.date, arr);
-      groups.push({ date: tx.date, items: arr });
-    }
-    dateMap.get(tx.date)!.push(tx);
-  }
+  const groups = groupByDate(transactions);
 
   return (
     <div className="flex flex-col gap-3">
@@ -203,7 +192,6 @@ function MobileGroupedList({
                   key={tx.id}
                   transaction={tx}
                   onCardClick={onCardClick}
-                  onDeleteSuccess={onDeleteSuccess}
                 />
               ))}
             </div>
@@ -222,7 +210,6 @@ function TransactionCard({
 }: {
   transaction: TransactionWithCategory;
   onCardClick: (transaction: TransactionWithCategory) => void;
-  onDeleteSuccess: () => void;
 }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -286,16 +273,7 @@ function GroupedTransactionRows({
   onRowClick: (transaction: TransactionWithCategory) => void;
   onDeleteSuccess: () => void;
 }) {
-  const groups: { date: string; items: TransactionWithCategory[] }[] = [];
-  const dateMap = new Map<string, TransactionWithCategory[]>();
-  for (const tx of transactions) {
-    if (!dateMap.has(tx.date)) {
-      const arr: TransactionWithCategory[] = [];
-      dateMap.set(tx.date, arr);
-      groups.push({ date: tx.date, items: arr });
-    }
-    dateMap.get(tx.date)!.push(tx);
-  }
+  const groups = groupByDate(transactions);
 
   return (
     <>

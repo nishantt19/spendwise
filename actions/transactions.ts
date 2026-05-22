@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { auditLog } from "@/lib/audit";
 import { transactionSchema } from "@/schema/transactions";
 import type {
   GetTransactionsResult,
@@ -168,6 +169,14 @@ export async function createTransaction(
 
   if (error) return { status: "error", message: error.message };
 
+  auditLog({
+    action: "create",
+    entity: "transaction",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { amount: data.amount, type: data.type, date: data.date },
+  });
+
   revalidatePath("/transactions");
   revalidatePath("/"); // invalidate dashboard too
 
@@ -222,6 +231,14 @@ export async function updateTransaction(
 
   if (error) return { status: "error", message: error.message };
 
+  auditLog({
+    action: "update",
+    entity: "transaction",
+    entity_id: data.id,
+    user_id: user.id,
+    details: { amount: data.amount, type: data.type, date: data.date },
+  });
+
   revalidatePath("/transactions");
   revalidatePath("/");
 
@@ -251,6 +268,13 @@ export async function softDeleteTransaction(
     .eq("user_id", user.id);
 
   if (error) return { status: "error", message: error.message };
+
+  auditLog({
+    action: "soft_delete",
+    entity: "transaction",
+    entity_id: id,
+    user_id: user.id,
+  });
 
   revalidatePath("/transactions");
   revalidatePath("/");

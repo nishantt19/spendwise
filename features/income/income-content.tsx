@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { TypographyH2 } from "@/components/ui/typography";
 
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatAmount, APP_LOCALE } from "@/lib/format";
 import {
   INCOME_SOURCE_TYPE_LABELS,
   INCOME_SOURCE_TYPE_COLORS,
@@ -245,7 +245,7 @@ export function IncomeContent({
                   <div className="flex items-end gap-0.5">
                     <span className="text-xs text-muted-foreground">₹</span>
                     <span className="text-2xl font-semibold tabular-nums tracking-tight leading-none">
-                      {formatCurrency(totalReceived).slice(1)}
+                      {formatAmount(totalReceived)}
                     </span>
                   </div>
                   <p className="text-11 text-muted-foreground self-start">
@@ -294,7 +294,7 @@ export function IncomeContent({
                 <div className="flex items-end gap-0.5 mt-1">
                   <span className="text-xs text-muted-foreground">₹</span>
                   <span className="text-2xl font-semibold tabular-nums tracking-tight leading-none">
-                    {formatCurrency(totalReceived).slice(1)}
+                    {formatAmount(totalReceived)}
                   </span>
                 </div>
 
@@ -705,7 +705,7 @@ function IncomeSourceRow({
       {/* Date */}
       <td className="hidden md:table-cell px-4 py-3.5 text-xs text-muted-foreground">
         {optimisticReceived && source.received_at ? (
-          new Date(source.received_at).toLocaleDateString("en-IN", {
+          new Date(source.received_at).toLocaleDateString(APP_LOCALE, {
             month: "short",
             year: "numeric",
           })

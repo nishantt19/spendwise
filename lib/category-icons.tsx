@@ -50,7 +50,9 @@ export const ICON_NAME_MAP: Record<string, ComponentType<IconProps>> = {
   Tag01, Package,
 };
 
-// Legacy: maps old emoji values (still in DB) → component
+// Legacy: maps old emoji values (still in DB for categories created before the icon-name migration) → component.
+// DO NOT remove entries — existing rows may still reference these emojis.
+// New categories always store an icon name string (e.g. "ShoppingCart01") resolved via ICON_NAME_MAP above.
 const EMOJI_TO_ICON: Record<string, ComponentType<IconProps>> = {
   "🛒": ShoppingCart01, "🛍": ShoppingBag01, "🛍️": ShoppingBag01,
   "🍽": Receipt, "🍽️": Receipt, "🍔": Receipt, "🍕": Receipt,

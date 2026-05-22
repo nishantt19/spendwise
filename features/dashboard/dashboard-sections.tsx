@@ -19,8 +19,11 @@ import {
 } from "@/actions/dashboard";
 import { TrendChart } from "./trend-chart";
 import { CategoryChart } from "./category-chart";
+import { Sparkline } from "@/components/ui/sparkline";
+import { groupByDate } from "@/lib/group-by-date";
 import {
   formatCurrency,
+  formatAmount,
   formatNextDueDate,
   formatDayLabel,
 } from "@/lib/format";
@@ -29,58 +32,6 @@ import { MONTH_LABELS } from "@/schema/income-sources";
 import { PAYMENT_METHOD_LABELS } from "@/schema/transactions";
 import type { TransactionWithCategory } from "@/types/transactions";
 import type { RecurringWithCategory } from "@/types/recurring";
-
-// ─── Sparkline (pure SVG) ─────────────────────────────────────────────────────
-
-function Sparkline({
-  data,
-  stroke = "var(--primary)",
-  fill = "var(--primary-soft)",
-  width = 60,
-  height = 24,
-}: {
-  data: number[];
-  stroke?: string;
-  fill?: string;
-  width?: number;
-  height?: number;
-}) {
-  if (data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const span = max - min || 1;
-  const stepX = width / (data.length - 1);
-  const pts = data.map((v, i) => [
-    i * stepX,
-    height - ((v - min) / span) * (height - 4) - 2,
-  ]);
-  const line = pts
-    .map(
-      (p, i) => `${i === 0 ? "M" : "L"} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`,
-    )
-    .join(" ");
-  const area = `${line} L ${width} ${height} L 0 ${height} Z`;
-  const last = pts[pts.length - 1];
-
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      style={{ width, height, display: "block" }}
-    >
-      <path d={area} fill={fill} stroke="none" />
-      <path
-        d={line}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx={last[0]} cy={last[1]} r="2" fill={stroke} />
-    </svg>
-  );
-}
 
 // ─── Merchant color helper ────────────────────────────────────────────────────
 
@@ -106,7 +57,7 @@ type IconComponent = React.FC<
 
 function KpiCard({
   label,
-  value,
+  amount,
   sub,
   icon: Icon,
   iconColor,
@@ -118,7 +69,8 @@ function KpiCard({
   sparkFill,
 }: {
   label: string;
-  value: string;
+  /** Raw numeric amount — formatted with split ₹ symbol internally. */
+  amount: number;
   sub: string;
   icon: IconComponent;
   iconColor: string;
@@ -145,16 +97,10 @@ function KpiCard({
       </div>
 
       {/* Value — split ₹ symbol so it renders smaller than the number */}
-      {value.startsWith("₹") ? (
-        <p className="flex items-baseline gap-1 tabular-nums tracking-[-0.03em] leading-none">
-          <span className="text-13 font-semibold text-muted-foreground tracking-normal">₹</span>
-          <span className="text-[26px] font-semibold truncate">{value.slice(1)}</span>
-        </p>
-      ) : (
-        <p className="text-[26px] font-semibold tabular-nums tracking-[-0.03em] leading-none truncate">
-          {value}
-        </p>
-      )}
+      <p className="flex items-baseline gap-1 tabular-nums tracking-[-0.03em] leading-none">
+        <span className="text-13 font-semibold text-muted-foreground tracking-normal">₹</span>
+        <span className="text-[26px] font-semibold truncate">{formatAmount(amount)}</span>
+      </p>
 
       {/* Inline sparkline */}
       {spark && spark.length >= 2 && (
@@ -240,7 +186,7 @@ export async function StatCards() {
     <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
       <KpiCard
         label="Expenses"
-        value={formatCurrency(data.monthlyExpenses)}
+        amount={data.monthlyExpenses}
         sub="This month"
         icon={CreditCard02}
         iconColor="var(--destructive)"
@@ -253,7 +199,7 @@ export async function StatCards() {
       />
       <KpiCard
         label="Income"
-        value={formatCurrency(data.monthlyIncomeReceived)}
+        amount={data.monthlyIncomeReceived}
         sub={
           data.monthlyIncomeExpected > 0
             ? `of ${formatCurrency(data.monthlyIncomeExpected)} expected`
@@ -270,7 +216,7 @@ export async function StatCards() {
       />
       <KpiCard
         label="Net savings"
-        value={formatCurrency(Math.abs(savings))}
+        amount={Math.abs(savings)}
         sub={savingsPositive ? "Surplus this month" : "Deficit this month"}
         icon={savingsPositive ? TrendUp01 : TrendDown01}
         iconColor={savingsPositive ? "var(--primary)" : "var(--destructive)"}
@@ -280,7 +226,7 @@ export async function StatCards() {
       />
       <KpiCard
         label="Recurring"
-        value={formatCurrency(data.recurringMonthlyTotal)}
+        amount={data.recurringMonthlyTotal}
         sub={data.overdueRecurringCount > 0 ? `${data.activeRecurringCount} active · ${data.overdueRecurringCount} overdue` : `${data.activeRecurringCount} active`}
         icon={RefreshCw04}
         iconColor="var(--warning)"
@@ -521,16 +467,7 @@ function MobileRecentExpenseCard({ tx }: { tx: TransactionWithCategory }) {
 export async function RecentExpensesSection() {
   const { recentExpenses } = await getRecentAndUpcomingData();
 
-  const groups: { date: string; items: TransactionWithCategory[] }[] = [];
-  const dateMap = new Map<string, TransactionWithCategory[]>();
-  for (const tx of recentExpenses) {
-    if (!dateMap.has(tx.date)) {
-      const arr: TransactionWithCategory[] = [];
-      dateMap.set(tx.date, arr);
-      groups.push({ date: tx.date, items: arr });
-    }
-    dateMap.get(tx.date)!.push(tx);
-  }
+  const groups = groupByDate(recentExpenses);
 
   return (
     <>
