@@ -71,9 +71,9 @@ export async function createRecurringExpense(
     .from("recurring_expenses")
     .insert({
       ...rest,
-      description: description ?? null,
-      category_id: category_id ?? null,
-      end_date: end_date ?? null,
+      description: description || null,
+      category_id: category_id || null,
+      end_date: end_date || null,
       // next_due_date starts at start_date; DB trigger advances it after each run
       next_due_date: parsed.data.start_date,
       user_id: user.id,
@@ -134,9 +134,9 @@ export async function updateRecurringExpense(
     .from("recurring_expenses")
     .update({
       ...rest,
-      description: description ?? null,
-      category_id: category_id ?? null,
-      end_date: end_date ?? null,
+      description: description || null,
+      category_id: category_id || null,
+      end_date: end_date || null,
     })
     .eq("id", id)
     .eq("user_id", user.id)

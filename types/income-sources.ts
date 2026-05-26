@@ -1,16 +1,11 @@
 import type { z } from "zod";
-import type {
-  INCOME_SOURCE_TYPES,
-  incomeSourceSchema,
-} from "@/schema/income-sources";
-
-export type IncomeSourceType = (typeof INCOME_SOURCE_TYPES)[number];
+import type { incomeSourceSchema } from "@/schema/income-sources";
 
 export type IncomeSource = {
   id: string;
   user_id: string;
   name: string;
-  source_type: IncomeSourceType;
+  category_id: string | null;
   amount: number;
   month: number; // 1–12
   year: number;  // e.g. 2026

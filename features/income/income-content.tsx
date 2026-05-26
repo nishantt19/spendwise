@@ -3,13 +3,6 @@
 import { useCallback, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
-  Briefcase01,
-  Laptop01,
-  Building07,
-  TrendUp01,
-  Home01,
-  Gift01,
-  CreditCard02,
   Wallet02,
   ChevronLeft,
   ChevronRight,
@@ -25,11 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { TypographyH2 } from "@/components/ui/typography";
 
 import { formatCurrency, formatAmount } from "@/lib/format";
-import {
-  INCOME_SOURCE_TYPE_LABELS,
-  INCOME_SOURCE_TYPE_COLORS,
-  MONTH_LABELS,
-} from "@/schema/income-sources";
+import { MONTH_LABELS } from "@/schema/income-sources";
 import { CategoryIcon } from "@/lib/category-icons";
 import type { Category } from "@/types/categories";
 import {
@@ -38,47 +27,12 @@ import {
   deleteIncomeSource,
 } from "@/actions/income-sources";
 import { IncomeSourceSheet } from "./income-source-sheet";
-import type { IncomeSource, IncomeSourceType } from "@/types/income-sources";
+import type { IncomeSource } from "@/types/income-sources";
 
-// ─── Icon map per source type ─────────────────────────────────────────────────
+// ─── Fallback icon/color when no category is set ──────────────────────────────
 
-const TYPE_ICONS: Record<IncomeSourceType, React.ElementType> = {
-  salary: Briefcase01,
-  freelance: Laptop01,
-  business: Building07,
-  investment: TrendUp01,
-  rental: Home01,
-  gift: Gift01,
-  credit_card: CreditCard02,
-  other: Wallet02,
-};
-
-// ─── Category matching ────────────────────────────────────────────────────────
-
-/** Maps income source_type enum values to keyword patterns for matching categories */
-const SOURCE_TYPE_KEYWORDS: Record<IncomeSourceType, RegExp> = {
-  salary:     /salary|wage|payroll|employ|job/i,
-  freelance:  /freelance|contract|consult|gig/i,
-  business:   /business|profit|revenue|commerce/i,
-  investment: /invest|dividend|stock|mutual|fund|equity|return/i,
-  rental:     /rent|rental|property|lease|tenant/i,
-  gift:       /gift|bonus|reward|prize|award/i,
-  credit_card:/credit/i,
-  other:      /other/i,
-};
-
-/**
- * Finds the best-matching income category for a given source_type.
- * Returns null if no income categories are available or no match found.
- */
-function findCategoryForSource(
-  sourceType: IncomeSourceType,
-  categories: Category[],
-): Category | null {
-  if (!categories.length) return null;
-  const pattern = SOURCE_TYPE_KEYWORDS[sourceType];
-  return categories.find((c) => pattern.test(c.name)) ?? null;
-}
+const FALLBACK_COLOR = "#6b7280";
+const FallbackIcon = Wallet02;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -560,10 +514,9 @@ function IncomeSourceCard({
   onCardClick: (source: IncomeSource) => void;
   incomeCategories?: Category[];
 }) {
-  const matchedCategory = findCategoryForSource(source.source_type, incomeCategories);
-  const Icon = TYPE_ICONS[source.source_type];
-  const color = matchedCategory?.color ?? INCOME_SOURCE_TYPE_COLORS[source.source_type];
-  const typeLabel = matchedCategory?.name ?? INCOME_SOURCE_TYPE_LABELS[source.source_type];
+  const category = incomeCategories.find((c) => c.id === source.category_id) ?? null;
+  const color = category?.color ?? FALLBACK_COLOR;
+  const typeLabel = category?.name ?? "Uncategorized";
 
   return (
     <div
@@ -575,10 +528,10 @@ function IncomeSourceCard({
         className="flex size-9 shrink-0 items-center justify-center rounded-lg"
         style={{ background: `${color}18`, color }}
       >
-        {matchedCategory ? (
-          <CategoryIcon icon={matchedCategory.icon} size={16} style={{ color }} />
+        {category ? (
+          <CategoryIcon icon={category.icon} size={16} style={{ color }} />
         ) : (
-          <Icon size={16} style={{ color }} />
+          <FallbackIcon size={16} style={{ color }} />
         )}
       </div>
 
@@ -661,10 +614,9 @@ function IncomeSourceRow({
     source.is_received,
   );
   const [, startToggleTransition] = useTransition();
-  const matchedCategory = findCategoryForSource(source.source_type, incomeCategories);
-  const Icon = TYPE_ICONS[source.source_type];
-  const color = matchedCategory?.color ?? INCOME_SOURCE_TYPE_COLORS[source.source_type];
-  const typeLabel = matchedCategory?.name ?? INCOME_SOURCE_TYPE_LABELS[source.source_type];
+  const category = incomeCategories.find((c) => c.id === source.category_id) ?? null;
+  const color = category?.color ?? FALLBACK_COLOR;
+  const typeLabel = category?.name ?? "Uncategorized";
 
   function handleToggle() {
     const next = !optimisticReceived;
@@ -691,10 +643,10 @@ function IncomeSourceRow({
             className="flex size-8 shrink-0 items-center justify-center rounded-lg"
             style={{ background: `${color}18`, color }}
           >
-            {matchedCategory ? (
-              <CategoryIcon icon={matchedCategory.icon} size={15} style={{ color }} />
+            {category ? (
+              <CategoryIcon icon={category.icon} size={15} style={{ color }} />
             ) : (
-              <Icon size={15} style={{ color }} />
+              <FallbackIcon size={15} style={{ color }} />
             )}
           </div>
           <div className="min-w-0">

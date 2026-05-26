@@ -1,46 +1,5 @@
 import { z } from "zod";
 
-// Matches the income_source_type enum in Supabase exactly
-export const INCOME_SOURCE_TYPES = [
-  "salary",
-  "freelance",
-  "business",
-  "investment",
-  "rental",
-  "gift",
-  "credit_card",
-  "other",
-] as const;
-
-export const INCOME_SOURCE_TYPE_LABELS: Record<
-  (typeof INCOME_SOURCE_TYPES)[number],
-  string
-> = {
-  salary: "Salary",
-  freelance: "Freelance",
-  business: "Business",
-  investment: "Investment",
-  rental: "Rental",
-  gift: "Gift",
-  credit_card: "Credit Card",
-  other: "Other",
-};
-
-// Color accent per source type (hex)
-export const INCOME_SOURCE_TYPE_COLORS: Record<
-  (typeof INCOME_SOURCE_TYPES)[number],
-  string
-> = {
-  salary: "#3b82f6",
-  freelance: "#8b5cf6",
-  business: "#f97316",
-  investment: "#10b981",
-  rental: "#14b8a6",
-  gift: "#ec4899",
-  credit_card: "#f59e0b",
-  other: "#6b7280",
-};
-
 export const MONTH_LABELS = [
   "January", "February", "March", "April",
   "May", "June", "July", "August",
@@ -54,7 +13,7 @@ export const incomeSourceSchema = z.object({
     .max(100, "Name must be 100 characters or less")
     .trim(),
 
-  source_type: z.enum(INCOME_SOURCE_TYPES),
+  category_id: z.string().uuid("Invalid category").nullable().optional(),
 
   // z.number() + valueAsNumber:true — Zod v4 coerce infers `unknown`
   amount: z
