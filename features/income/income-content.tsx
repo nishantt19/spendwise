@@ -24,12 +24,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { TypographyH2 } from "@/components/ui/typography";
 
-import { formatCurrency, formatAmount, APP_LOCALE } from "@/lib/format";
+import { formatCurrency, formatAmount } from "@/lib/format";
 import {
   INCOME_SOURCE_TYPE_LABELS,
   INCOME_SOURCE_TYPE_COLORS,
   MONTH_LABELS,
 } from "@/schema/income-sources";
+import { CategoryIcon } from "@/lib/category-icons";
+import type { Category } from "@/types/categories";
 import {
   getIncomeSources,
   toggleIncomeReceived,
@@ -51,12 +53,40 @@ const TYPE_ICONS: Record<IncomeSourceType, React.ElementType> = {
   other: Wallet02,
 };
 
+// ─── Category matching ────────────────────────────────────────────────────────
+
+/** Maps income source_type enum values to keyword patterns for matching categories */
+const SOURCE_TYPE_KEYWORDS: Record<IncomeSourceType, RegExp> = {
+  salary:     /salary|wage|payroll|employ|job/i,
+  freelance:  /freelance|contract|consult|gig/i,
+  business:   /business|profit|revenue|commerce/i,
+  investment: /invest|dividend|stock|mutual|fund|equity|return/i,
+  rental:     /rent|rental|property|lease|tenant/i,
+  gift:       /gift|bonus|reward|prize|award/i,
+  credit_card:/credit/i,
+  other:      /other/i,
+};
+
+/**
+ * Finds the best-matching income category for a given source_type.
+ * Returns null if no income categories are available or no match found.
+ */
+function findCategoryForSource(
+  sourceType: IncomeSourceType,
+  categories: Category[],
+): Category | null {
+  if (!categories.length) return null;
+  const pattern = SOURCE_TYPE_KEYWORDS[sourceType];
+  return categories.find((c) => pattern.test(c.name)) ?? null;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type IncomeContentProps = {
   initialSources: IncomeSource[];
   initialMonth: number;
   initialYear: number;
+  incomeCategories: Category[];
 };
 
 // ─── Root component ───────────────────────────────────────────────────────────
@@ -65,6 +95,7 @@ export function IncomeContent({
   initialSources,
   initialMonth,
   initialYear,
+  incomeCategories,
 }: IncomeContentProps) {
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
@@ -413,6 +444,7 @@ export function IncomeContent({
                   key={source.id}
                   source={source}
                   onCardClick={openEditSheet}
+                  incomeCategories={incomeCategories}
                 />
               ))}
             </div>
@@ -453,6 +485,7 @@ export function IncomeContent({
                       onRowClick={openEditSheet}
                       onToggleSuccess={handleToggleReceived}
                       onDelete={handleDeleteSource}
+                      incomeCategories={incomeCategories}
                     />
                   ))}
                 </tbody>
@@ -470,6 +503,7 @@ export function IncomeContent({
         defaultMonth={month}
         defaultYear={year}
         onSuccess={handleRefresh}
+        incomeCategories={incomeCategories}
       />
     </>
   );
@@ -520,12 +554,16 @@ function ProgressBar({
 function IncomeSourceCard({
   source,
   onCardClick,
+  incomeCategories = [],
 }: {
   source: IncomeSource;
   onCardClick: (source: IncomeSource) => void;
+  incomeCategories?: Category[];
 }) {
+  const matchedCategory = findCategoryForSource(source.source_type, incomeCategories);
   const Icon = TYPE_ICONS[source.source_type];
-  const color = INCOME_SOURCE_TYPE_COLORS[source.source_type];
+  const color = matchedCategory?.color ?? INCOME_SOURCE_TYPE_COLORS[source.source_type];
+  const typeLabel = matchedCategory?.name ?? INCOME_SOURCE_TYPE_LABELS[source.source_type];
 
   return (
     <div
@@ -537,7 +575,11 @@ function IncomeSourceCard({
         className="flex size-9 shrink-0 items-center justify-center rounded-lg"
         style={{ background: `${color}18`, color }}
       >
-        <Icon size={16} style={{ color }} />
+        {matchedCategory ? (
+          <CategoryIcon icon={matchedCategory.icon} size={16} style={{ color }} />
+        ) : (
+          <Icon size={16} style={{ color }} />
+        )}
       </div>
 
       {/* Content */}
@@ -552,7 +594,7 @@ function IncomeSourceCard({
               color: "var(--muted-foreground)",
             }}
           >
-            {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
+            {typeLabel}
           </span>
           {/* Status badge */}
           {source.is_received ? (
@@ -607,18 +649,22 @@ function IncomeSourceRow({
   onRowClick,
   onToggleSuccess,
   onDelete,
+  incomeCategories = [],
 }: {
   source: IncomeSource;
   onRowClick: (source: IncomeSource) => void;
   onToggleSuccess: (id: string, newValue: boolean) => void;
   onDelete: (source: IncomeSource) => void;
+  incomeCategories?: Category[];
 }) {
   const [optimisticReceived, setOptimisticReceived] = useOptimistic(
     source.is_received,
   );
   const [, startToggleTransition] = useTransition();
+  const matchedCategory = findCategoryForSource(source.source_type, incomeCategories);
   const Icon = TYPE_ICONS[source.source_type];
-  const color = INCOME_SOURCE_TYPE_COLORS[source.source_type];
+  const color = matchedCategory?.color ?? INCOME_SOURCE_TYPE_COLORS[source.source_type];
+  const typeLabel = matchedCategory?.name ?? INCOME_SOURCE_TYPE_LABELS[source.source_type];
 
   function handleToggle() {
     const next = !optimisticReceived;
@@ -645,14 +691,18 @@ function IncomeSourceRow({
             className="flex size-8 shrink-0 items-center justify-center rounded-lg"
             style={{ background: `${color}18`, color }}
           >
-            <Icon size={15} style={{ color }} />
+            {matchedCategory ? (
+              <CategoryIcon icon={matchedCategory.icon} size={15} style={{ color }} />
+            ) : (
+              <Icon size={15} style={{ color }} />
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-13 font-medium max-w-36 sm:max-w-48">
               {source.name}
             </p>
             <p className="text-11 text-muted-foreground mt-0.5">
-              {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
+              {typeLabel}
             </p>
           </div>
         </div>
@@ -671,7 +721,7 @@ function IncomeSourceRow({
             className="size-1.5 rounded-full shrink-0"
             style={{ background: color }}
           />
-          {INCOME_SOURCE_TYPE_LABELS[source.source_type]}
+          {typeLabel}
         </span>
       </td>
 
@@ -704,14 +754,7 @@ function IncomeSourceRow({
 
       {/* Date */}
       <td className="hidden md:table-cell px-4 py-3.5 text-xs text-muted-foreground">
-        {optimisticReceived && source.received_at ? (
-          new Date(source.received_at).toLocaleDateString(APP_LOCALE, {
-            month: "short",
-            year: "numeric",
-          })
-        ) : (
-          <span className="text-muted-foreground/40">—</span>
-        )}
+        {MONTH_LABELS[source.month - 1]} {source.year}
       </td>
 
       {/* Amount */}

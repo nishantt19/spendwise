@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { getIncomeSources } from "@/actions/income-sources";
+import { getCategories } from "@/actions/categories";
 import { IncomeContent } from "@/features/income/income-content";
 
 export const metadata: Metadata = {
@@ -13,7 +14,10 @@ export default async function IncomePage() {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const { data: sources } = await getIncomeSources(month, year);
+  const [{ data: sources }, { income: incomeCategories }] = await Promise.all([
+    getIncomeSources(month, year),
+    getCategories(),
+  ]);
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
@@ -21,6 +25,7 @@ export default async function IncomePage() {
         initialSources={sources}
         initialMonth={month}
         initialYear={year}
+        incomeCategories={incomeCategories}
       />
     </div>
   );

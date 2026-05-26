@@ -39,7 +39,47 @@ import {
 import type {
   IncomeSource,
   IncomeSourceFormData,
+  IncomeSourceType,
 } from "@/types/income-sources";
+import type { Category } from "@/types/categories";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+// ─── Category ↔ source_type helpers ──────────────────────────────────────────
+
+const SOURCE_TYPE_KEYWORDS: Record<IncomeSourceType, RegExp> = {
+  salary: /salary|wage|payroll|employ|job/i,
+  freelance: /freelance|contract|consult|gig/i,
+  business: /business|profit|revenue|commerce/i,
+  investment: /invest|dividend|stock|mutual|fund|equity|return/i,
+  rental: /rent|rental|property|lease|tenant/i,
+  gift: /gift|bonus|reward|prize|award/i,
+  credit_card: /credit/i,
+  other: /other/i,
+};
+
+/** Maps a category name to the closest source_type enum value. */
+function mapCategoryToSourceType(categoryName: string): IncomeSourceType {
+  const n = categoryName.toLowerCase().trim();
+  if (/salary|wage|payroll|employ|job/.test(n)) return "salary";
+  if (/freelance|contract|consult|gig/.test(n)) return "freelance";
+  if (/business|profit|revenue|commerce/.test(n)) return "business";
+  if (/invest|dividend|stock|mutual|fund|equity/.test(n)) return "investment";
+  if (/rent|rental|property|lease|tenant/.test(n)) return "rental";
+  if (/gift|bonus|reward|prize|award/.test(n)) return "gift";
+  if (/credit/.test(n)) return "credit_card";
+  return "other";
+}
+
+/** Finds the first income category whose name matches the given source_type. */
+function findCategoryIdForSourceType(
+  sourceType: IncomeSourceType,
+  categories: Category[],
+): string | null {
+  if (!categories.length) return null;
+  const pattern = SOURCE_TYPE_KEYWORDS[sourceType];
+  return categories.find((c) => pattern.test(c.name))?.id ?? null;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +90,8 @@ type IncomeSourceSheetProps = {
   defaultMonth: number;
   defaultYear: number;
   onSuccess?: () => void;
+  /** Income categories from the user's categories table — used to populate the Type dropdown. */
+  incomeCategories?: Category[];
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -61,11 +103,16 @@ export function IncomeSourceSheet({
   defaultMonth,
   defaultYear,
   onSuccess,
+  incomeCategories = [],
 }: IncomeSourceSheetProps) {
   const isEditing = !!source;
   const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Tracks which income category is selected in the dropdown (only used when incomeCategories is provided)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
 
   const {
     register,
@@ -91,7 +138,17 @@ export function IncomeSourceSheet({
   useEffect(() => {
     if (!open) return;
     reset(buildDefaults(source ?? null, defaultMonth, defaultYear));
-  }, [open, source, defaultMonth, defaultYear, reset]);
+    // Pre-select the category that matches the stored source_type (when editing)
+    if (incomeCategories.length > 0) {
+      const sourceType = source?.source_type ?? "salary";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedCategoryId(
+        findCategoryIdForSourceType(sourceType, incomeCategories),
+      );
+    } else {
+      setSelectedCategoryId(null);
+    }
+  }, [open, source, defaultMonth, defaultYear, reset, incomeCategories]);
 
   function onSubmit(values: IncomeSourceFormData) {
     startSaveTransition(async () => {
@@ -173,27 +230,53 @@ export function IncomeSourceSheet({
             {/* ── Source type ──────────────────────────────────────── */}
             <Field>
               <FieldLabel className="text-xs sm:text-13">Type</FieldLabel>
-              <Select
-                value={watchSourceType}
-                onValueChange={(val) =>
-                  setValue(
-                    "source_type",
-                    val as IncomeSourceFormData["source_type"],
-                  )
-                }
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-full text-xs sm:text-13">
-                  <SelectValue placeholder="Select income type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INCOME_SOURCE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {INCOME_SOURCE_TYPE_LABELS[type]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {incomeCategories.length > 0 ? (
+                /* Use the user's income categories as type options */
+                <Select
+                  value={selectedCategoryId ?? ""}
+                  onValueChange={(catId) => {
+                    const cat = incomeCategories.find((c) => c.id === catId);
+                    if (!cat) return;
+                    setSelectedCategoryId(catId);
+                    setValue("source_type", mapCategoryToSourceType(cat.name));
+                  }}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-full text-xs sm:text-13">
+                    <SelectValue placeholder="Select income type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {incomeCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                /* Fallback: hardcoded source types */
+                <Select
+                  value={watchSourceType}
+                  onValueChange={(val) =>
+                    setValue(
+                      "source_type",
+                      val as IncomeSourceFormData["source_type"],
+                    )
+                  }
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-full text-xs sm:text-13">
+                    <SelectValue placeholder="Select income type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INCOME_SOURCE_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {INCOME_SOURCE_TYPE_LABELS[type]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {errors.source_type && (
                 <FieldDescription className="text-destructive text-11 sm:text-13">
                   {errors.source_type.message}
@@ -204,7 +287,7 @@ export function IncomeSourceSheet({
             {/* ── Amount ───────────────────────────────────────────── */}
             <Field>
               <FieldLabel htmlFor="is-amount" className="text-xs sm:text-13">
-                Expected amount
+                Amount
               </FieldLabel>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-13 text-muted-foreground">
